@@ -49,17 +49,18 @@
 
 (http-server 8888)
 
-(define (rguile port)
+
+
+
+(define (rguile-client host port to-eval)
   (let ((s (socket PF_INET SOCK_STREAM 0)))
-    (setsockopt s SOL_SOCKET SO_REUSEADDR 1)
-    (bind s AF_INET (inet-pton AF_INET "127.0.0.1") port)
-    (listen s 5)
+    (connect s AF_INET (inet-pton AF_INET host) port)
+    (display "(let () " s)
+    (display to-eval s)
+    (display ")" s)
 
-    (let* ((client-connection (accept s))
-           (client-details (cdr client-connection))
-           (client (car client-connection)))
-      (do ((ex (read client) (read client))) ((eof-object? ex))
-        (eval ex (interaction-environment))))
-    (close s)))
+    (let ((res (read s)))
+      (close s)
+      res)))
 
-(rguile 8888)
+(rguile-client "127.0.0.1" 8192 "#t")
