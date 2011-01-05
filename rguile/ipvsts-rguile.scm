@@ -32,11 +32,11 @@
     (define (process-connection s)
       (catch #t
         (lambda ()
-          (display
-           (eval (read s) (interaction-environment))
-           s))
+          (let ((res (eval (read s) (interaction-environment))))
+            (cond ((eq? res *unspecified*) (simple-format s "(ok)"))
+                  (#t (simple-format s "(ok ~S)" res)))))
         (lambda (key . args)
-          (simple-format s "(error '~A '~A)" key args))))
+          (simple-format s "(error '~A)" key))))
 
     (define (accept-connections s)
       (while #t
@@ -66,6 +66,7 @@
   (exit 0))
 
 (sigaction SIGINT sig-handler SA_RESTART)
+(sigaction SIGPIPE SIG_IGN)
 
 (cond ((eq? (cdr (command-line)) '()) (usage))
       ((eq? (cddr (command-line)) '())
