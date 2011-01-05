@@ -40,13 +40,17 @@
 
     (define (accept-connections s)
       (while #t
-        (let* ((client-connection (accept s))
-               (client-details (cdr client-connection))
-               (client (car client-connection)))
-          (dynamic-wind
-            (lambda () #t)
-            (lambda () (process-connection client))
-            (lambda () (close client))))))
+        (catch #t
+          (lambda ()
+            (let* ((client-connection (accept s))
+                   (client-details (cdr client-connection))
+                   (client (car client-connection)))
+              (dynamic-wind
+                (lambda () #t)
+                (lambda () (process-connection client))
+                (lambda () (close client)))))
+        (lambda (key . args)
+          #f))))
 
     (let ((s (create-socket)))
       (dynamic-wind
