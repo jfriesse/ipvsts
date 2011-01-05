@@ -40,27 +40,10 @@
          (newline)))
     (close s)))
 
-
-(define (sig-handler sig)
-  (display sig)
-  (set 'want-quit? #t))
-
-(sigaction SIGUSR1 sig-handler)
-
-(http-server 8888)
-
-
-
-
-(define (rguile-client host port to-eval)
-  (let ((s (socket PF_INET SOCK_STREAM 0)))
-    (connect s AF_INET (inet-pton AF_INET host) port)
-    (display "(let () " s)
-    (display to-eval s)
-    (display ")" s)
-
-    (let ((res (read s)))
-      (close s)
-      res)))
-
 (rguile-client "127.0.0.1" 8192 "#t")
+
+(set! %load-path (append %load-path (list ".")))
+(use-modules (ice-9 rdelim))
+(use-modules (ipvsts netfuncs))
+(uri-parse "http://google.com/ahoj.txt")
+
