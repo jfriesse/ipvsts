@@ -23,6 +23,17 @@
 
 (define-module (rguile client))
 
+(export rguile-client-unsafe rguile-client-stat rguile-client)
+
+;; General remote guile client. This is unsafe version which is
+;; evaluted directly, not surrounded with (let () ... ). This means
+;; that this is only one which is able to define new symbols.
+;; host is host where rguile server is running, port is ip_port of
+;; rgule server and to-eval is string to eval.
+;; Returned value is list in form of:
+;; - (ok) - result was unspecified
+;; - (ok result)
+;; - (error 'error-code)
 (define (rguile-client-unsafe host port to-eval)
   (let ((s (socket PF_INET SOCK_STREAM 0)))
     (dynamic-wind
@@ -34,5 +45,27 @@
         (read s))
       (lambda () (close s)))))
 
-(define (rguile-client host port to-eval)
+;; Remote guile client with status return. This is safe version which is
+;; surrounded with (let () ... ).
+;; host is host where rguile server is running, port is ip_port of
+;; rgule server and to-eval is string to eval.
+;; Returned value is list in form of:
+;; - (ok) - result was unspecified
+;; - (ok result)
+;; - (error 'error-code)
+(define (rguile-client-stat host port to-eval)
   (rguile-client-unsafe host port (simple-format #f "(let () ~A)" to-eval)))
+
+;; Reccomended Remote guile client. This is safe version which calls
+;; rguile-client-stat, but returned value is directly transformed to
+;; ether *unspecified* or return value or misc-error is thrown on error
+;; host is host where rguile server is running, port is ip_port of
+;; rgule server and to-eval is string or (symbol/list) to eval.
+(define (rguile-client host port to-eval)
+  (let ((res
+         (cond ((string? to-eval) (rguile-client-stat host port to-eval))
+               (#t (rguile-client-stat host port (simple-format #f "~S" to-eval))))))
+    (cond ((null? (cdr res)) *unspecified*)
+          ((equal? (car res) 'ok) (cadr res))
+          ((equal? (car res) 'error) (error (cadr res)))
+          (#t (error 'unknown-output)))))
