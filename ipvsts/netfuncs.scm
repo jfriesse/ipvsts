@@ -23,6 +23,7 @@
 
 (define-module (ipvsts netfuncs))
 (use-modules (ice-9 rdelim))
+(use-modules (ice-9 rw))
 
 (export uri-parse net-getip net-getport http-get)
 
@@ -78,9 +79,11 @@
       (connect s AF_INET (net-getip host) (net-getport ip_port))
       (simple-format s "GET ~A\r\n" path)
 
-      (do ((line (read-line s) (read-line s)))
-          ((eof-object? line))
-        (display line port))
+      (let* ((str-len 1024)
+             (str (make-string str-len)))
+        (do ((readed (read-string!/partial str s 0 str-len) (read-string!/partial str s 0 str-len)))
+            ((not readed))
+          (write-string/partial str port 0 readed)))
       (close s)
       #t))
 
