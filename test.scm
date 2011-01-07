@@ -38,6 +38,13 @@
            (path (substring path-with-proto 0 (string-index path-with-proto #\ ))))
       (list keyword path)))
 
+  (define (finish-http-reading s)
+    (do ((line (read-line s) (read-line s)))
+        ((or (equal? line "") (equal? line "\r")))
+
+      (display line)(newline)
+      #t))
+
   (define (accept-connection s)
     (let* ((client-connection (accept s))
            (client-details (cdr client-connection))
@@ -47,8 +54,14 @@
         (lambda ()
           (let* ((first-line (read-line client))
                  (method-path (first-line-parse first-line)))
+            (finish-http-reading client)
             (cond ((and (equal? (car method-path) "GET") (equal? (cadr method-path) "/ipvsts.ks"))
-                   (display "ipvsts.ks content" client))
+                   (let* ((f (open-file "ks.cfg" "r"))
+                         (str-len 1024)
+                         (str (make-string str-len)))
+                     (do ((readed (read-string!/partial str f 0 str-len) (read-string!/partial str f 0 str-len)))
+                         ((not readed))
+                       (write-string/partial str client 0 readed))))
                   (#t
                                         ;(display "HTTP/1.1 200 OK\r\n" client)
                                         ;   (display "Content-Type:  application/octet-stream\r\n" client)
