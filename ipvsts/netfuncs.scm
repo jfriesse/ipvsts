@@ -24,8 +24,10 @@
 (define-module (ipvsts netfuncs))
 (use-modules (ice-9 rdelim))
 (use-modules (ice-9 rw))
+(use-modules (ipvsts utils))
 
-(export uri-parse net-getip net-getport http-get)
+(export uri-parse net-getip net-getport http-get
+        httpd:init httpd:accept)
 
 ;; Parse uri (protocol://host:port/root_path) string to list in form
 ;; (protocol host port root_path) or #f if uri is invalid. port may be
@@ -99,3 +101,51 @@
                        (path (cadddr parsed))
                        (ip_port (if (caddr parsed) (caddr parsed) 80)))
                    (get3 host ip_port path))))))))
+
+;; Init http daemon. Socket is bound on host:ip-port.
+;; Returned value is port which can be used to select on and also for future
+;; accepting connection. Port should be closed when not needed.
+(define (httpd:init host ip-port)
+  (let ((s (socket PF_INET SOCK_STREAM 0)))
+    (setsockopt s SOL_SOCKET SO_REUSEADDR 1)
+    (bind s AF_INET (inet-pton AF_INET host) ip-port)
+    (listen s 5)
+    s))
+
+;; Accept connection on port. get-file is procedure which takes two parameters
+;; client-port and requested path. get-file should write ouput to client-port and
+;; return (not #f) if path is supported, otherwise #t should be returned. Only
+;; supported http protocol is 0.9, so only GET command.
+(define (httpd:accept port get-file)
+  (define (not-found client path)
+    (simple-format client
+                   "<html><head><title>404 Not Found</title></head><body><p>URL ~A was not found.</p></body></html>"
+                   path))
+
+  (define (first-line-parse line)
+    (let* ((keyword (substring line 0 (string-index line #\ )))
+           (path-with-proto (substring line (1+ (string-index line #\ ))))
+           (path
+            (if (string-index path-with-proto #\ )
+                (substring path-with-proto 0 (string-index path-with-proto #\ ))
+                path-with-proto)))
+      (list keyword path)))
+
+  (define (finish-http-reading s)
+    (do ((line (read-line s) (read-line s)))
+        ((or (equal? line "") (equal? line "\r")))
+      #t))
+
+  (let* ((client-connection (accept port))
+         (client-details (cdr client-connection))
+         (client (car client-connection)))
+    (dynamic-wind
+      (lambda () #t)
+      (lambda ()
+        (let* ((first-line (read-line client))
+               (method-path (first-line-parse first-line)))
+          (finish-http-reading client)
+          (cond ((equal? (car method-path) "GET")
+                 (if (not (get-file client (cadr method-path))) (not-found client (cadr method-path))))
+                (#t (not-found client (cadr method-path))))))
+      (lambda () (close client)))))
