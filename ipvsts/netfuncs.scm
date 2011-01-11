@@ -27,7 +27,7 @@
 (use-modules (ipvsts utils))
 
 (export uri-parse net-getip net-getport http-get
-        httpd:init httpd:accept)
+        httpd:init httpd:accept http-get-file)
 
 ;; Parse uri (protocol://host:port/root_path) string to list in form
 ;; (protocol host port root_path) or #f if uri is invalid. port may be
@@ -101,6 +101,12 @@
                        (path (cadddr parsed))
                        (ip_port (if (caddr parsed) (caddr parsed) 80)))
                    (get3 host ip_port path))))))))
+
+;; Download file from http with uri and save it to file named path.
+(define (http-get-file path uri)
+  (let ((f (open-file path "w")))
+    (http-get f uri)
+    (close f)))
 
 ;; Init http daemon. Socket is bound on host:ip-port.
 ;; Returned value is port which can be used to select on and also for future
