@@ -27,12 +27,23 @@
 (export port-cat mkdir-safe)
 
 ;; Copy content of source-port to destination port dest-port
+;; source and dest ports can be any type of port, but if both of them are file ports,
+;; faster block read is used. Otherwise *much* slower read-char/write char is used
 (define (port-cat source-port dest-port)
-  (let* ((str-len 1024)
-         (str (make-string str-len)))
-    (do ((readed (read-string!/partial str source-port 0 str-len) (read-string!/partial str source-port 0 str-len)))
-        ((not readed))
-      (write-string/partial str dest-port 0 readed))))
+  (define (block-cat)
+    (let* ((str-len 1024)
+           (str (make-string str-len)))
+      (do ((readed (read-string!/partial str source-port 0 str-len) (read-string!/partial str source-port 0 str-len)))
+          ((not readed))
+        (write-string/partial str dest-port 0 readed))))
+
+  (define (char-cat)
+    (do ((readed (read-char source-port) (read-char source-port)))
+        ((eof-object? readed))
+      (write-char readed dest-port)))
+
+  (cond ((and (file-port? source-port) (file-port? dest-port)) (block-cat))
+        (#t (char-cat))))
 
 ;; Create directory and all subdirectories if not exists
 (define (mkdir-safe path)
