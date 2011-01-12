@@ -27,7 +27,7 @@
 (use-modules (ipvsts utils))
 
 (export uri-parse net-getip net-getport http-get
-        httpd:init httpd:accept http-get-file)
+        httpd:init httpd:accept http-get-file http-serve-string10)
 
 ;; Parse uri (protocol://host:port/root_path) string to list in form
 ;; (protocol host port root_path) or #f if uri is invalid. port may be
@@ -155,3 +155,12 @@
                  (if (not (get-file client (cadr method-path))) (not-found client (cadr method-path))))
                 (#t (not-found client (cadr method-path))))))
       (lambda () (close client)))))
+
+;; Output str to port with HTTP 1.0 headers
+(define (http-serve-string10 port str)
+  (display "HTTP/1.0 200 OK\r\n" port)
+  (display "Content-Type: text/plain\r\n" port)
+  (simple-format port "Content-Length: ~A\r\n\r\n" (string-length str))
+  (let ((f (open-input-string str)))
+    (port-cat f port)
+    (close f)))
