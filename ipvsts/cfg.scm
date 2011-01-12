@@ -39,11 +39,16 @@
   (set-cfg! 'ipvsts:vm-dir (string-append (getenv "HOME") "/vms"))
   (set-cfg! 'ipvsts:http-mirror "http://download")
   (set-cfg! 'ipvsts:vm-disk-size "1.5G")
+  (set-cfg! 'ipvsts:vm-passwd "password")
   (set-cfg! 'test:arch "unknown")
   (set-cfg! 'test:version "unknown")
   (set-cfg! 'test:name "unknown")
   (set-cfg! 'test:install-url "unknown")
   (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-default.log")))
 
-(set-defaults!)
+(define (load-user-defaults!)
+  (if (access? (string-append (getenv "HOME") "/.ipvsts") R_OK)
+    (load (string-append (getenv "HOME") "/.ipvsts"))))
 
+(set-defaults!)
+(load-user-defaults!)
