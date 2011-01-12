@@ -21,27 +21,26 @@
 ;; Author: Jan Friesse <jfriesse@redhat.com>
 ;;
 
-(define ipvsts:qemu-img "/usr/bin/qemu-img")
-(define ipvsts:qemu "/usr/bin/qemu-kvm")
-(define ipvsts:vm-dir (string-append (getenv "HOME") "/vms"))
-(define ipvsts:http-mirror "http://download")
-(define ipvsts:vm-disk-size "1.5G")
-(define test:arch "i386")
-(define test:version "6.0")
-(define test:name "rhel-6")
-(define test:install-url (string-append ipvsts:http-mirror "/released/RHEL-6-Server/" test:version "/" test:arch "/os"))
-(define test:log-file-name (string-append (getenv "HOME") "/ipvsts-" test:name ".log"))
-
 (set! %load-path (append %load-path (list ".")))
 (use-modules (ice-9 rdelim))
+(use-modules (ice-9 rw))
+(use-modules (ipvsts cfg))
+(use-modules (ipvsts logging))
 (use-modules (ipvsts netfuncs))
 (use-modules (ipvsts utils))
-(use-modules (ice-9 rw))
+
+(set-cfg! 'test:arch "i386")
+(set-cfg! 'test:version "6.0")
+(set-cfg! 'test:name "rhel-6")
+(set-cfg! 'test:install-url (string-append (cfg 'ipvsts:http-mirror) "/released/RHEL-6-Server/"
+                                           (cfg 'test:version) "/" (cfg 'test:arch) "/os"))
+(set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-" (cfg 'test:name) ".log"))
+
 
 (define (vminstall:download)
-  (let* ((vm-dir (string-append ipvsts:vm-dir "/" test:name))
-         (vmlinuz-path (string-append test:install-url "/images/pxeboot/vmlinuz"))
-         (initrd-path (string-append test:install-url "/images/pxeboot/initrd.img")))
+  (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
+         (vmlinuz-path (string-append (cfg 'test:install-url) "/images/pxeboot/vmlinuz"))
+         (initrd-path (string-append (cfg 'test:install-url) "/images/pxeboot/initrd.img")))
     (ipvsts:log "creating ~A" vm-dir)
     (mkdir-safe vm-dir)
     (ipvsts:log "download ~A" vmlinuz-path)
@@ -51,8 +50,8 @@
 
 
 (define (vminstall:disk-create)
-  (let* ((vm-dir (string-append ipvsts:vm-dir "/" test:name))
-         (args (list ipvsts:qemu-img "create" "-f" "qcow2" (string-append vm-dir "/c.img") ipvsts:vm-disk-size))
+  (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
+         (args (list (cfg 'ipvsts:qemu-img) "create" "-f" "qcow2" (string-append vm-dir "/c.img") (cfg 'ipvsts:vm-disk-size)))
          (stat (apply system* args)))
     (ipvsts:log "creating image ~A return val ~A" args (status:exit-val stat))
     (if (= (status:exit-val stat) 0) #t #f)))
@@ -87,4 +86,4 @@
 
 (vminstall:download)
 (vminstall:disk-create)
-(vminstall:run-install)
+;; (vminstall:run-install)

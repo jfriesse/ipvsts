@@ -24,7 +24,7 @@
 (define-module (ipvsts utils))
 (use-modules (ice-9 rw))
 
-(export port-cat mkdir-safe ipvsts:log)
+(export port-cat mkdir-safe)
 
 ;; Copy content of source-port to destination port dest-port
 (define (port-cat source-port dest-port)
@@ -44,21 +44,3 @@
                  (mkdir new-str-path))
              (iter new-str-path (cdr rest-path))))))
   (iter "" (string-split path #\/)))
-
-;; Append log message to test:log-file-name
-;; Message and args are same as for simple-format are
-;; Every message is prepended by call stack
-(define (ipvsts:log message . args)
-  (define (strace-procs fr str)
-    (cond ((not fr) str)
-          ((and (frame-procedure? fr) (procedure-name (frame-procedure fr)))
-           (strace-procs (frame-previous fr)
-                         (string-append (symbol->string (procedure-name (frame-procedure fr)))
-                                        (if (equal? str "") "" "-> ")
-                                        str)))
-          (#t (strace-procs (frame-previous fr) str))))
-
-  (let* ((f (open-file test:log-file-name "a"))
-         (proc (strace-procs (stack-ref (make-stack #t ipvsts:log) 0) "")))
-    (apply simple-format (append (list f (string-append "~A: " message "\n") proc) args))
-    (close f)))
