@@ -36,7 +36,6 @@
                                            (cfg 'test:version) "/" (cfg 'test:arch) "/os"))
 (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-" (cfg 'test:name) ".log"))
 
-
 (define (vminstall:download)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
          (vmlinuz-path (string-append (cfg 'test:install-url) "/images/pxeboot/vmlinuz"))
@@ -56,15 +55,28 @@
     (ipvsts:log "creating image ~A return val ~A" args (status:exit-val stat))
     (if (= (status:exit-val stat) 0) #t #f)))
 
+(define (vminstall:create-ks)
+  (let ((os (open-output-string)))
+    (simple-format os "install\nurl --url=~A\n" (cfg 'test:install-url))
+    (display "text\nlang en_US.UTF-8\nkeyboard us\n" os)
+    (display "network --bootproto=dhcp\n" os)
+    (display "zerombr\nclearpart --all --initlabel\npart / --size=1024 --grow\npart swap --size=128\n" os)
+    (simple-format os "bootloader\ntimezone --utc UTC\nrootpw --plaintext ~A\n" (cfg 'ipvsts:vm-passwd))
+    (display "firewall --enabled\nfirstboot --disabled\nselinux --enforcing\nskipx\npoweroff\n" os)
+    (display "%packages\n@Core --nodefaults\n@Base --nodefaults\nyum\nguile\n%end\n" os)
+    (let ((res (get-output-string os)))
+      (close os)
+      res)))
+
 (define (vminstall:run-install)
   (define (http-server cl path)
+    (ipvsts:log "client want's to download path ~A" path)
     (cond ((equal? path "/ipvsts.ks")
-           (let ((f (open-file "ks.cfg" "r")))
-             (port-cat f cl)))
+           (http-serve-string10 cl (vminstall:create-ks)))
           (#t #f)))
 
-  (let* ((vm-dir (string-append ipvsts:vm-dir "/" test:name))
-         (args (list ipvsts:qemu "-kernel" (string-append vm-dir "/vmlinuz")
+  (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
+         (args (list (cfg 'ipvsts:qemu) "-kernel" (string-append vm-dir "/vmlinuz")
                     "-initrd" (string-append vm-dir "/initrd.img")
                     "-hda" (string-append vm-dir "/c.img")
                     "-m" "512" "-net" "nic,model=virtio" "-net" "user"
@@ -86,4 +98,4 @@
 
 (vminstall:download)
 (vminstall:disk-create)
-;; (vminstall:run-install)
+(vminstall:run-install)
