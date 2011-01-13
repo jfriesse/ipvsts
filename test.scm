@@ -62,7 +62,7 @@
     (display "network --bootproto=dhcp\n" os)
     (display "zerombr\nclearpart --all --initlabel\npart / --size=1024 --grow\npart swap --size=128\n" os)
     (simple-format os "bootloader\ntimezone --utc UTC\nrootpw --plaintext ~A\n" (cfg 'ipvsts:vm-passwd))
-    (display "firewall --enabled\nfirstboot --disabled\nselinux --enforcing\nskipx\npoweroff\n" os)
+    (display "firewall --disabled\nfirstboot --disabled\nselinux --enforcing\nskipx\npoweroff\n" os)
     (display "%packages\n@Core --nodefaults\n@Base --nodefaults\nyum\nguile\n%end\n" os)
     (let ((res (get-output-string os)))
       (close os)
