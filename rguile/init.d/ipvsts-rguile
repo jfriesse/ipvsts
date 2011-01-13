@@ -1,0 +1,58 @@
+#!/bin/bash
+
+#
+# ipvsts-rguile		Start up the ipvsts-rguile daemon
+#
+# chkconfig: 2345 55 25
+# description: ipvsts-rguile daemon is network enabled version of \
+#              guile to be used by ipvsts.
+#
+#
+
+prog="ipvsts-rguile"
+
+# Source function library.
+. /etc/init.d/functions
+
+start() {
+	echo -n $"Starting $prog: "
+	/usr/local/bin/ipvsts-rguile.scm 2323 < /dev/null > /dev/null &
+	newpid=$!
+	# Wait second to be sure that process is up and running
+	sleep 1
+	if [ -d "/proc/$newpid" ];then
+		success $"$prog startup"
+		echo $newpid > /var/run/$prog.pid
+	else
+		failure $"$prog startup"
+	fi
+	echo
+	return $RETVAL
+}
+
+stop() {
+	echo -n $"Shutting down $prog: "
+	killproc $prog
+	RETVAL=$?
+	echo
+	return $RETVAL
+}
+
+case "$1" in
+start)
+	start
+	;;
+stop)
+	stop
+	;;
+restart)
+	stop
+	start
+	;;
+status)
+	status $prog
+	;;
+*)
+	echo $"Usage: $0 {start|stop|status|restart}"
+	exit 2
+esac
