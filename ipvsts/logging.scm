@@ -29,17 +29,19 @@
 ;; Message and args are same as for simple-format are
 ;; Every message is prepended by call stack
 (define (ipvsts:log message . args)
-  (define (strace-procs fr str)
+  (define (strace-procs deep fr str)
     (cond ((not fr) str)
           ((and (frame-procedure? fr) (procedure-name (frame-procedure fr)))
-           (strace-procs (frame-previous fr)
-                         (string-append (symbol->string (procedure-name (frame-procedure fr)))
-                                        (if (equal? str "") "" "-> ")
-                                        str)))
-          (#t (strace-procs (frame-previous fr) str))))
+           (if (not deep)
+               (strace-procs deep (frame-previous fr)
+                             (string-append (symbol->string (procedure-name (frame-procedure fr)))
+                                            (if (equal? str "") "" "-> ")
+                                            str))
+               (symbol->string (procedure-name (frame-procedure fr)))))
+          (#t (strace-procs deep (frame-previous fr) str))))
 
   (let* ((f (open-file (cfg 'test:log-file-name) "a"))
-         (proc (strace-procs (stack-ref (make-stack #t ipvsts:log) 0) "")))
+         (proc (strace-procs #t (stack-ref (make-stack #t ipvsts:log) 0) "")))
     (apply simple-format (append (list f (string-append "~A: " message "\n") proc) args))
     (close f)))
 
