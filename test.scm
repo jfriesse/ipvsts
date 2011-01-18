@@ -21,7 +21,7 @@
 ;; Author: Jan Friesse <jfriesse@redhat.com>
 ;;
 
-(set! %load-path (append %load-path (list ".")))
+(set! %load-path (append %load-path (list "." "/usr/local/share/ipvsts" "/usr/share/ipvsts")))
 (use-modules (ice-9 rdelim))
 (use-modules (ice-9 rw))
 (use-modules (ipvsts cfg))
@@ -57,6 +57,18 @@
     (if (= (status:exit-val stat) 0) #t #f)))
 
 (define (vminstall:create-ks)
+  (define (append-file port from-file to-file)
+    (let ((path (find-file-in-lpath from-file)))
+      (if path
+          (let ((file (open-file (string-append path "/" from-file) "r")))
+            (if (not file) #f
+                (let ()
+                  (simple-format port "cat << 'EOF' > ~A\n" to-file)
+                  (port-cat file port)
+                  (display "EOF\n" port)
+                  (close file))))
+          #f)))
+
   (let ((os (open-output-string)))
     (simple-format os "install\nurl --url=~A\n" (cfg 'test:install-url))
     (display "text\nlang en_US.UTF-8\nkeyboard us\n" os)
@@ -64,10 +76,24 @@
     (display "zerombr\nclearpart --all --initlabel\npart / --size=1024 --grow\npart swap --size=128\n" os)
     (simple-format os "bootloader\ntimezone --utc UTC\nrootpw --plaintext ~A\n" (cfg 'ipvsts:vm-passwd))
     (display "firewall --disabled\nfirstboot --disabled\nselinux --enforcing\nskipx\npoweroff\n" os)
-    (display "%packages\n@Core --nodefaults\n@Base --nodefaults\nyum\nguile\n%end\n" os)
-    (let ((res (get-output-string os)))
-      (close os)
-      res)))
+    (display "%packages --nobase\n@Core --nodefaults\nyum\nguile\n%end\n" os)
+    (display "%post\n" os)
+
+    (if (not (and
+              (append-file os "rguile/ipvsts-rguile.scm" "/usr/local/bin/ipvsts-rguile.scm")
+              (append-file os "rguile/init.d/ipvsts-rguile" "/etc/rc.d/init.d/ipvsts-rguile")))
+        #f
+        (let ()
+          (display "chmod 755 /usr/local/bin/ipvsts-rguile.scm /etc/rc.d/init.d/ipvsts-rguile\n" os)
+          (display "/sbin/chkconfig --add ipvsts-rguile\n" os)
+          (display "/sbin/chkconfig ipvsts-rguile on\n" os)
+          (display "%end\n" os)
+
+          (let ((res (get-output-string os)))
+            (close os)
+            res)))))
+
+(vminstall:create-ks)
 
 (define (vminstall:run-install)
   (define (http-server cl path)
@@ -95,11 +121,26 @@
              (httpd:accept http-port http-server)
              (ipvsts:log "kickstart downloaded")
              (close http-port)
-             (waitpid pid))))))
+             (ipvsts:log "waiting for end of installation")
+             (waitpid pid)
+             (ipvsts:log "installation finished")
+             #t)))))
+
+
+(define (find-file-in-path path file)
+  (define (iter path)
+    (cond ((null? path) #f)
+          ((access? (string-append (car path) "/" file) R_OK) (car path))
+          (#t (iter (cdr path)))))
+  (iter path))
+
+(define (find-file-in-lpath file)
+  (find-file-in-path %load-path file))
+
 
 
 (ipvsts:check
  (vminstall:download)
  (vminstall:disk-create))
 
-;;(vminstall:run-install)
+(vminstall:run-install)
