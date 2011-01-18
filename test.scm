@@ -28,6 +28,7 @@
 (use-modules (ipvsts logging))
 (use-modules (ipvsts netfuncs))
 (use-modules (ipvsts utils))
+(use-modules (ipvsts tunit))
 
 (set-cfg! 'test:arch "i386")
 (set-cfg! 'test:version "6.0")
@@ -47,11 +48,11 @@
     (ipvsts:log "download ~A" initrd-path)
     (http-get-file (string-append vm-dir "/initrd.img") initrd-path)))
 
-
 (define (vminstall:disk-create)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (args (list (cfg 'ipvsts:qemu-img) "create" "-f" "qcow2" (string-append vm-dir "/c.img") (cfg 'ipvsts:vm-disk-size)))
-         (stat (apply system* args)))
+         (args (string-append (cfg 'ipvsts:qemu-img) " create -f qcow2 " (string-append vm-dir "/c.img") " "
+                              (cfg 'ipvsts:vm-disk-size) " >/dev/null"))
+         (stat (system args)))
     (ipvsts:log "creating image ~A return val ~A" args (status:exit-val stat))
     (if (= (status:exit-val stat) 0) #t #f)))
 
@@ -96,6 +97,9 @@
              (close http-port)
              (waitpid pid))))))
 
-(vminstall:download)
-(vminstall:disk-create)
-(vminstall:run-install)
+
+(ipvsts:check
+ (vminstall:download)
+ (vminstall:disk-create))
+
+;;(vminstall:run-install)
