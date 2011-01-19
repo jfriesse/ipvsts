@@ -34,7 +34,10 @@
         (lambda ()
           (let ((res (eval (read s) (interaction-environment))))
             (cond ((eq? res *unspecified*) (simple-format s "(ok)"))
-                  (#t (simple-format s "(ok ~S)" res)))))
+                  (#t (simple-format s "(ok ~S)" res))))
+
+          (do ((readed (read-char s) (read-char s)))
+              ((eof-object? readed))))
         (lambda (key . args)
           (simple-format s "(error '~A)" key))))
 
