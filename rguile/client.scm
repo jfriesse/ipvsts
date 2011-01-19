@@ -23,7 +23,7 @@
 
 (define-module (rguile client))
 
-(export rguile-client-unsafe rguile-client-stat rguile-client)
+(export rguile-client-unsafe rguile-client-stat rguile-client rguile-client-direct)
 
 ;; General remote guile client. This is unsafe version which is
 ;; evaluted directly, not surrounded with (let () ... ). This means
@@ -61,7 +61,7 @@
 ;; ether *unspecified* or return value or misc-error is thrown on error
 ;; host is host where rguile server is running, port is ip_port of
 ;; rgule server and to-eval is string or (symbol/list) to eval.
-(define (rguile-client host port to-eval)
+(define (rguile-client-direct host port to-eval)
   (let ((res
          (cond ((string? to-eval) (rguile-client-stat host port to-eval))
                (#t (rguile-client-stat host port (simple-format #f "~S" to-eval))))))
@@ -69,3 +69,9 @@
           ((equal? (car res) 'ok) (cadr res))
           ((equal? (car res) 'error) (error (cadr res)))
           (#t (error 'unknown-output)))))
+
+;; Function which return rguile client closure. So it's possible to create
+;; this object once and then call with expression parameter.
+(define (rguile-client host port)
+  (lambda (to-eval)
+    (rguile-client-direct host port to-eval)))
