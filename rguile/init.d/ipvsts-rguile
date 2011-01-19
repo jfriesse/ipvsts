@@ -14,9 +14,19 @@ prog="ipvsts-rguile"
 # Source function library.
 . /etc/init.d/functions
 
+# Definitions
+# Method can be serial for use of serial port or any other for use of tcp
+IPVSTSRG_METHOD=tcp
+# Parameters for ipvsts
+IPVSTSRG_PARAM=2323
+
 start() {
 	echo -n $"Starting $prog: "
-	/usr/local/bin/ipvsts-rguile.scm 2323 < /dev/null > /dev/null &
+	if [ "$IPVSTSRG_METHOD" == "serial" ];then
+		/bin/stty -F "$IPVSTSRG_PARAM" -echo 115200
+	fi
+	/usr/local/bin/ipvsts-rguile.scm $IPVSTSRG_PARAM #< /dev/null > /dev/null &
+	exit
 	newpid=$!
 	# Wait second to be sure that process is up and running
 	sleep 1
