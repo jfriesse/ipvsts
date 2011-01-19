@@ -24,7 +24,7 @@
 (define-module (ipvsts utils))
 (use-modules (ice-9 rw))
 
-(export port-cat mkdir-safe)
+(export port-cat mkdir-safe find-file-in-path find-file-in-lpath)
 
 ;; Copy content of source-port to destination port dest-port
 ;; source and dest ports can be any type of port, but if both of them are file ports,
@@ -55,3 +55,15 @@
                  (mkdir new-str-path))
              (iter new-str-path (cdr rest-path))))))
   (iter "" (string-split path #\/)))
+
+;; Tries to find file in list of paths which can be readed. Returned value is path
+(define (find-file-in-path path file)
+  (define (iter path)
+    (cond ((null? path) #f)
+          ((access? (string-append (car path) "/" file) R_OK) (car path))
+          (#t (iter (cdr path)))))
+  (iter path))
+
+;; Wrapper for find-file-in-path where path is %load-path
+(define (find-file-in-lpath file)
+  (find-file-in-path %load-path file))

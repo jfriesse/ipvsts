@@ -93,8 +93,6 @@
             (close os)
             res)))))
 
-(vminstall:create-ks)
-
 (define (vminstall:run-install)
   (define (http-server cl path)
     (ipvsts:log "client want's to download path ~A" path)
@@ -126,21 +124,8 @@
              (ipvsts:log "installation finished")
              #t)))))
 
-
-(define (find-file-in-path path file)
-  (define (iter path)
-    (cond ((null? path) #f)
-          ((access? (string-append (car path) "/" file) R_OK) (car path))
-          (#t (iter (cdr path)))))
-  (iter path))
-
-(define (find-file-in-lpath file)
-  (find-file-in-path %load-path file))
-
-
-
 (ipvsts:check
  (vminstall:download)
  (vminstall:disk-create))
 
-(vminstall:run-install)
+;; (vminstall:run-install)
