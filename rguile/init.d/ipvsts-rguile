@@ -16,17 +16,16 @@ prog="ipvsts-rguile"
 
 # Definitions
 # Method can be serial for use of serial port or any other for use of tcp
-IPVSTSRG_METHOD=tcp
+IPVSTSRG_METHOD=serial
 # Parameters for ipvsts
-IPVSTSRG_PARAM=2323
+IPVSTSRG_PARAM=/dev/ttyS0
 
 start() {
 	echo -n $"Starting $prog: "
 	if [ "$IPVSTSRG_METHOD" == "serial" ];then
-		/bin/stty -F "$IPVSTSRG_PARAM" -echo 115200
+		/bin/stty -F "$IPVSTSRG_PARAM" raw -echo 115200
 	fi
-	/usr/local/bin/ipvsts-rguile.scm $IPVSTSRG_PARAM #< /dev/null > /dev/null &
-	exit
+	/usr/local/bin/ipvsts-rguile.scm $IPVSTSRG_PARAM < /dev/null > /dev/null &
 	newpid=$!
 	# Wait second to be sure that process is up and running
 	sleep 1
