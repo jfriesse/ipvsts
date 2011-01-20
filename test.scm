@@ -29,6 +29,7 @@
 (use-modules (ipvsts netfuncs))
 (use-modules (ipvsts utils))
 (use-modules (ipvsts tunit))
+(use-modules (rguile client))
 
 (set-cfg! 'test:arch "i386")
 (set-cfg! 'test:version "6.0")
@@ -50,7 +51,8 @@
 
 (define (vminstall:disk-create)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (args (string-append (cfg 'ipvsts:qemu-img) " create -f qcow2 " (string-append vm-dir "/c.img") " "
+         (args (string-append (cfg 'ipvsts:qemu-img) " create -f qcow2 "
+                              (string-append vm-dir "/c.img") " "
                               (cfg 'ipvsts:vm-disk-size) " >/dev/null"))
          (stat (system args)))
     (ipvsts:log "creating image ~A return val ~A" args (status:exit-val stat))
@@ -73,8 +75,10 @@
     (simple-format os "install\nurl --url=~A\n" (cfg 'test:install-url))
     (display "text\nlang en_US.UTF-8\nkeyboard us\n" os)
     (display "network --bootproto=dhcp\n" os)
-    (display "zerombr\nclearpart --all --initlabel\npart / --size=1024 --grow\npart swap --size=128\n" os)
-    (simple-format os "bootloader\ntimezone --utc UTC\nrootpw --plaintext ~A\n" (cfg 'ipvsts:vm-passwd))
+    (display "zerombr\n" os)
+    (display "clearpart --all --initlabel\npart / --size=1024 --grow\npart swap --size=128\n" os)
+    (simple-format os "bootloader\ntimezone --utc UTC\nrootpw --plaintext ~A\n"
+                   (cfg 'ipvsts:vm-passwd))
     (display "firewall --disabled\nfirstboot --disabled\nselinux --enforcing\nskipx\npoweroff\n" os)
     (display "%packages --nobase\n@Core --nodefaults\nyum\nguile\n%end\n" os)
     (display "%post\n" os)
@@ -126,6 +130,5 @@
 
 (ipvsts:check
  (vminstall:download)
- (vminstall:disk-create))
-
-;; (vminstall:run-install)
+ (vminstall:disk-create)
+ (vminstall:run-install))

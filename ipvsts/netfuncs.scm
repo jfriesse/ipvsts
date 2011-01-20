@@ -124,9 +124,8 @@
 ;; supported http protocol is 0.9, so only GET command.
 (define (httpd:accept port get-file)
   (define (not-found client path)
-    (simple-format client
-                   "<html><head><title>404 Not Found</title></head><body><p>URL ~A was not found.</p></body></html>"
-                   path))
+    (simple-format client "<html><head><title>404 Not Found</title></head>")
+    (simple-format client "<body><p>URL ~A was not found.</p></body></html>" path))
 
   (define (first-line-parse line)
     (let* ((keyword (substring line 0 (string-index line #\ )))
@@ -152,7 +151,8 @@
                (method-path (first-line-parse first-line)))
           (finish-http-reading client)
           (cond ((equal? (car method-path) "GET")
-                 (if (not (get-file client (cadr method-path))) (not-found client (cadr method-path))))
+                 (if (not (get-file client (cadr method-path)))
+                     (not-found client (cadr method-path))))
                 (#t (not-found client (cadr method-path))))))
       (lambda () (close client)))))
 

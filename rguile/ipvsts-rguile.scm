@@ -89,7 +89,8 @@
         (lambda () (close s)))))
 
 (define (usage)
-  (simple-format (current-error-port) "usage: ~A [port number | /dev/serial-port]\n" (car (command-line)))
+  (simple-format (current-error-port) "usage: ~A [port number | /dev/serial-port]\n"
+                 (car (command-line)))
   (exit 1))
 
 (define (sig-handler sig)
@@ -106,6 +107,7 @@
              ((= (string-prefix-length (cadr (command-line)) "/dev/") (string-length "/dev/"))
                 (rguile-server-serial (cadr (command-line))))
              (#t
-              (simple-format (current-error-port) "illegal number or /dev/... -- ~A\n" (cadr (command-line)))
+              (simple-format (current-error-port) "illegal number or /dev/... -- ~A\n"
+                             (cadr (command-line)))
               (usage))))
       (#t (usage)))

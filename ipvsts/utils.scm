@@ -33,7 +33,8 @@
   (define (block-cat)
     (let* ((str-len 1024)
            (str (make-string str-len)))
-      (do ((readed (read-string!/partial str source-port 0 str-len) (read-string!/partial str source-port 0 str-len)))
+      (do ((readed (read-string!/partial str source-port 0 str-len)
+                   (read-string!/partial str source-port 0 str-len)))
           ((not readed))
         (write-string/partial str dest-port 0 readed))))
 

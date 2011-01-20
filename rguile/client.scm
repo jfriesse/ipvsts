@@ -23,7 +23,8 @@
 
 (define-module (rguile client))
 
-(export rguile-client-unsafe rguile-client-stat rguile-client rguile-client-direct)
+(export rguile-client-unsafe rguile-client-stat rguile-client rguile-client-direct
+        rguile-client-wait-for-operational-state)
 
 ;; General remote guile client. This is unsafe version which is
 ;; evaluted directly, not surrounded with (let () ... ). This means
@@ -75,3 +76,25 @@
 (define (rguile-client host port)
   (lambda (to-eval)
     (rguile-client-direct host port to-eval)))
+
+;; Wait for operational state but maximum for max-time seconds.
+;; Returns #t if client is in operational state or #f on timeout
+(define (rguile-client-wait-for-operational-state host port to-eval max-time)
+  (define (one-iter s)
+    (display "1\n" s)
+
+    (let ((finished #f))
+      (while (not (null? (car (select (list s) '() '() 1))))
+        (if (equal? (read-char s) #\1) (set! finished #t)))
+      finished))
+
+  (let ((s (socket PF_INET SOCK_STREAM 0)))
+    (dynamic-wind
+      (lambda ()
+        (connect s AF_INET (inet-pton AF_INET host) port))
+      (lambda ()
+        (let ((t (current-time)))
+          (while (and (< (- (current-time) t) max-time) (not (one-iter s))) #t)
+          (if (< (- (current-time) t) max-time) #t #f)))
+      (lambda ()
+        (close s)))))
