@@ -52,7 +52,7 @@
 (define (vminstall:disk-create)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
          (args (string-append (cfg 'ipvsts:qemu-img) " create -f qcow2 "
-                              (string-append vm-dir "/c.img") " "
+                              (string-append vm-dir "/base.img") " "
                               (cfg 'ipvsts:vm-disk-size) " >/dev/null"))
          (stat (system args)))
     (ipvsts:log "creating image ~A return val ~A" args (status:exit-val stat))
@@ -107,7 +107,7 @@
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
          (args (list (cfg 'ipvsts:qemu) "-kernel" (string-append vm-dir "/vmlinuz")
                     "-initrd" (string-append vm-dir "/initrd.img")
-                    "-hda" (string-append vm-dir "/c.img")
+                    "-hda" (string-append vm-dir "/base.img")
                     "-m" "512" "-net" "nic,model=virtio" "-net" "user"
                     "-append" "ks=http://10.0.2.2:8888/ipvsts.ks"
                     "-vnc" ":11"))
