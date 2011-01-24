@@ -24,7 +24,8 @@
 (define-module (ipvsts utils))
 (use-modules (ice-9 rw))
 
-(export port-cat mkdir-safe find-file-in-path find-file-in-lpath)
+(export port-cat mkdir-safe find-file-in-path find-file-in-lpath
+        byte->hexstr)
 
 ;; Copy content of source-port to destination port dest-port
 ;; source and dest ports can be any type of port, but if both of them are file ports,
@@ -68,3 +69,13 @@
 ;; Wrapper for find-file-in-path where path is %load-path
 (define (find-file-in-lpath file)
   (find-file-in-path %load-path file))
+
+;; Convert byte value (number from 0 to 255) to hex string with leading 0
+;; If byte is not byte, exception or #f is returned otherwise string is returned
+(define (byte->hexstr byte)
+  (if (or (< byte 0) (> byte 255))
+      #f
+      (let ((str (string-upcase (number->string byte 16))))
+        (if (= (string-length str) 1)
+            (string-append "0" str)
+            str))))
