@@ -45,7 +45,11 @@
   (set-cfg! 'test:name "unknown")
   (set-cfg! 'test:install-url "unknown")
   (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-default.log"))
-  (set-cfg! 'test:vm-max-install-time (* 60 60)))
+  (set-cfg! 'test:vm:max-install-time (* 60 60))
+  (set-cfg! 'test:vm:mem 128)
+  (set-cfg! 'test:vm:net 'user)
+  (set-cfg! 'test:vm:vnc-base 10))
+
 
 (define (load-user-defaults!)
   (if (access? (string-append (getenv "HOME") "/.ipvsts") R_OK)

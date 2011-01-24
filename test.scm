@@ -106,11 +106,11 @@
 
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
          (args (list (cfg 'ipvsts:qemu) "-kernel" (string-append vm-dir "/vmlinuz")
-                    "-initrd" (string-append vm-dir "/initrd.img")
-                    "-hda" (string-append vm-dir "/base.img")
-                    "-m" "512" "-net" "nic,model=virtio" "-net" "user"
-                    "-append" "ks=http://10.0.2.2:8888/ipvsts.ks"
-                    "-vnc" ":11"))
+                     "-initrd" (string-append vm-dir "/initrd.img")
+                     "-hda" (string-append vm-dir "/base.img")
+                     "-m" "512" "-net" "nic,model=virtio" "-net" "user"
+                     "-append" "ks=http://10.0.2.2:8888/ipvsts.ks"
+                     "-vnc" ":11"))
          (pid (primitive-fork)))
     (cond ((= pid 0)
            (let ()
