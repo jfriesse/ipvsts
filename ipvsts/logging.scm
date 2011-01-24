@@ -42,7 +42,8 @@
 
   (let* ((f (open-file (cfg 'test:log-file-name) "a"))
          (proc (strace-procs #t (stack-ref (make-stack #t ipvsts:log) 0) "")))
-    (apply simple-format (append (list f (string-append "~A: " message "\n") proc) args))
+    (apply simple-format (append (list f (string-append "~A ~A: " message "\n")
+                                       (strftime "%F %T" (localtime (current-time))) proc) args))
     (close f)))
 
 (debug-enable 'debug)
