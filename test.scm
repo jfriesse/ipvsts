@@ -40,39 +40,41 @@
                                            (cfg 'test:version) "/" (cfg 'test:arch) "/os"))
 (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-" (cfg 'test:name) ".log"))
 
-(ipvsts:check
- (vminstall:download)
- (vminstall:disk-create)
- (vminstall:run-install))
+;;(ipvsts:check
+;; (vminstall:download)
+;; (vminstall:disk-create)
+;; (vminstall:run-install))
 
-(define (vm:start name order args)
-  (let* ((mem (if (assoc 'mem args) (cdr (assoc 'mem args)) (cfg 'test:vm:mem)))
-         (net (if (assoc 'net args) (cdr (assoc 'net args)) (cfg 'test:vm:net)))
+(define (vm:start name order . args)
+  (define (get-net-qemu-params order params)
+    (define (iter params i res)
+      (if (null? params) res
+          (let ((nic-params
+                 (list "-net" (simple-format #f "nic,vlan=~A,model=virtio,macaddr=~A"
+                                             i
+                                             (simple-format #f (cfg 'test:vm:macaddr)
+                                                            (byte->hexstr order)
+                                                            (byte->hexstr i))))))
+            (cond  ((equal? (car params) 'user)
+                    (iter (cdr params)
+                          (+ i 1)
+                          (append res nic-params
+                                  (list "-net" (simple-format #f "user,vlan=~A" i)))))
+                   (#t
+                    (iter (cdr params)
+                          (+ i 1)
+                          (append res nic-params
+                                  (list "-net"
+                                        (simple-format
+                                         #f "socket,vlan=~A,mcast=~A:~A"
+                                         i (cfg 'test:vm:mcast-addr)
+                                         (+ (cfg 'test:vm:mcast-port-base) (cdar params)))))))))))
+    (iter params 0 '()))
+
+  (let* ((mem (get-param-val 'mem 'test:vm:mem args))
+         (net (get-param-val 'net 'test:vm:net args))
          (vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (vm-net-model-args
-          (cond ((equal? net 'both)
-                 (list
-                  "-net"
-                  (simple-format #f "nic,vlan=0,model=virtio,macaddr=52:54:00:00:00:~A"
-                                 (byte->hexstr (1+ (* order 2))))
-                  "-net"
-                  (simple-format #f "nic,vlan=1,model=virtio,macaddr=52:54:00:00:00:~A"
-                                (byte->hexstr (* order 2)))))
-                (#t
-                 (list
-                  "-net"
-                  (simple-format #f "nic,vlan=0,model=virtio,macaddr=52:54:00:00:00:~A"
-                                 (byte->hexstr (* order 2)))))))
-         (vm-net-type-args
-          (cond ((equal? net 'user)
-                 (list "-net" "user,vlan=0"))
-                ((equal? net 'lan1)
-                 (list "-net" "socket,vlan=0,mcast=239.255.0.1:4096"))
-                ((equal? net 'lan2)
-                 (list "-net" "socket,vlan=0,mcast=239.255.0.1:4097"))
-                ((equal? net 'both)
-                 (list "-net" "socket,vlan=0,mcast=239.255.0.1:4096"
-                       "-net" "socket,vlan=0,mcast=239.255.0.1:4097"))))
+         (net-args (get-net-qemu-params order net))
          (vm-args (append (list (cfg 'ipvsts:qemu)
                      "-hda" (string-append vm-dir "/" name ".img")
                      "-m" (number->string mem)
@@ -81,8 +83,23 @@
                      (string-append "tcp:127.0.0.1:"
                                     (number->string (+ order (cfg 'test:vm:rguile-port-base)))
                                     ",server,nowait"))
-                     vm-net-type-args vm-net-model-args)))
+                     net-args)))
     vm-args))
 
-(display (vm:start "c1" 2 '()))
+(display (vm:start "c1" 2))
+;;'((net . (user ))))
+           (display (vm:start "c1" 2 '((net . (user (net . 1) (net . 2) (net . 3))))))
 ;; (apply system* (vm:start "c1" 2 '((net . both))))
+
+;(set-cfg! 'test:arch "i386")
+;(set-cfg! 'test:version "U5")
+;(set-cfg! 'test:name "rhel-5")
+;(set-cfg! 'test:install-url (string-append (cfg 'ipvsts:http-mirror) "/released/RHEL-5-Server/"
+;                                           (cfg 'test:version) "/" (cfg 'test:arch) "/os"))
+;(set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-" (cfg 'test:name) ".log"))
+;(set-cfg! 'test:distro 'el5)
+
+;;(ipvsts:check
+; (vminstall:download)
+; (vminstall:disk-create)
+; (vminstall:run-install))
