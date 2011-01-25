@@ -23,7 +23,7 @@
 
 (define-module (ipvsts cfg))
 
-(export cfg set-cfg! set-alist-cfg!)
+(export cfg set-cfg! set-alist-cfg! set-unsetcfg! set-alist-unsetcfg!)
 
 (define cfg-ht (make-hash-table))
 
@@ -41,6 +41,18 @@
         (#t
          (set-cfg! (caar alist) (cdar alist))
          (set-alist-cfg! (cdr alist)))))
+
+;; Set variable only if it's not already set
+(define (set-unsetcfg! var val)
+  (if (eq? (hash-get-handle cfg-ht var) #f)
+      (set-cfg! var val)))
+
+;; Stores list of (key . value) pairs but only if key is not already set
+(define (set-alist-unsetcfg! alist)
+  (cond ((null? alist) #t)
+        (#t
+         (set-unsetcfg! (caar alist) (cdar alist))
+         (set-alist-unsetcfg! (cdr alist)))))
 
 ;; Set default values
 (define (set-defaults!)
