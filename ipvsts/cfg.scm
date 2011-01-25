@@ -23,34 +23,48 @@
 
 (define-module (ipvsts cfg))
 
-(export cfg set-cfg!)
+(export cfg set-cfg! set-alist-cfg!)
 
 (define cfg-ht (make-hash-table))
 
+;; Retreives cfg key value
 (define (cfg var)
   (hash-ref cfg-ht var))
 
+;; Set cfg key to val
 (define (set-cfg! var val)
   (hash-set! cfg-ht var val))
 
-(define (set-defaults!)
-  (set-cfg! 'ipvsts:qemu-img "/usr/bin/qemu-img")
-  (set-cfg! 'ipvsts:qemu "/usr/bin/qemu-kvm")
-  (set-cfg! 'ipvsts:vm-dir (string-append (getenv "HOME") "/vms"))
-  (set-cfg! 'ipvsts:http-mirror "http://download")
-  (set-cfg! 'ipvsts:vm-disk-size "1.5G")
-  (set-cfg! 'ipvsts:vm-passwd "password")
-  (set-cfg! 'test:arch "unknown")
-  (set-cfg! 'test:version "unknown")
-  (set-cfg! 'test:name "unknown")
-  (set-cfg! 'test:install-url "unknown")
-  (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-default.log"))
-  (set-cfg! 'test:vm:max-install-time (* 60 60))
-  (set-cfg! 'test:vm:mem 128)
-  (set-cfg! 'test:vm:net 'user)
-  (set-cfg! 'test:vm:vnc-base 10)
-  (set-cfg! 'test:vm:rguile-port-base 2300))
+;; Stores list of (key . value) pairs
+(define (set-alist-cfg! alist)
+  (cond ((null? alist) #t)
+        (#t
+         (set-cfg! (caar alist) (cdar alist))
+         (set-alist-cfg! (cdr alist)))))
 
+;; Set default values
+(define (set-defaults!)
+  ;; Fixed (non computed) values
+  (set-alist-cfg!
+   '((ipvsts:qemu-img . "/usr/bin/qemu-img")
+     (ipvsts:qemu . "/usr/bin/qemu-kvm")
+     (ipvsts:http-mirror . "http://download")
+     (ipvsts:vm-disk-size . "1.5G")
+     (ipvsts:vm-passwd . "password")
+     (test:arch . "unknown")
+     (test:version . "unknown")
+     (test:name . "unknown")
+     (test:install-url . "unknown")
+     (test:vm:mem . 128)
+     (test:vm:net . 'user)
+     (test:vm:vnc-base . 10)
+     (test:vm:rguile-port-base . 2300)))
+  ;; Computed values
+  (set-cfg! 'ipvsts:vm-dir (string-append (getenv "HOME") "/vms"))
+  (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-default.log"))
+  (set-cfg! 'test:vm:max-install-time (* 60 60)))
+
+;; Load user defaults from ~/.ipvsts if such file exists
 (define (load-user-defaults!)
   (if (access? (string-append (getenv "HOME") "/.ipvsts") R_OK)
     (load (string-append (getenv "HOME") "/.ipvsts"))))
