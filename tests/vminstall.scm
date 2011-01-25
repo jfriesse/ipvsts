@@ -50,7 +50,7 @@
                        (cfg 'ipvsts:qemu-img) " create -f " (cfg 'vminstall:disk:format)
                        " " vm-dir "/" disk-name ".img" " " disk-size " >/dev/null"))
          (stat (system system-args)))
-    (ipvsts:log "creating image ~A return val ~A" args (status:exit-val stat))
+    (ipvsts:log "creating image ~A return val ~A" system-args (status:exit-val stat))
     (if (= (status:exit-val stat) 0) #t #f)))
 
 ;; Returns kickstart. args may contain format with value el5 or el6
@@ -115,29 +115,36 @@
             (close os)
             res)))))
 
-;; Starts installation
-(define (vminstall:run-install)
+;; Starts installation. args may contain distro with el5 or el6 value, name with disk name to use,
+;; mem with amount of memory
+(define (vminstall:run-install . args)
   (define (http-server cl path)
     (ipvsts:log "client want's to download path ~A" path)
     (cond ((equal? path "/ipvsts.ks")
-           (http-serve-string10 cl (vminstall:create-ks)))
+           (let ((distro (get-param-val 'distro 'test:distro args)))
+             (http-serve-string10 cl (vminstall:create-ks (list (cons 'format distro))))))
           (#t #f)))
 
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (args (list (cfg 'ipvsts:qemu) "-kernel" (string-append vm-dir "/vmlinuz")
-                     "-initrd" (string-append vm-dir "/initrd.img")
-                     "-hda" (string-append vm-dir "/base.img")
-                     "-m" "512" "-net" "nic,model=virtio" "-net" "user"
-                     "-append" "ks=http://10.0.2.2:8888/ipvsts.ks"
-                     "-vnc" ":11"))
+         (disk-name (get-param-val 'name 'vminstall:disk:name args))
+         (mem (get-param-val 'mem 'vminstall:mem args))
+         (system-args (list (cfg 'ipvsts:qemu) "-kernel" (string-append vm-dir "/vmlinuz")
+                            "-initrd" (string-append vm-dir "/initrd.img")
+                            "-hda" (string-append vm-dir "/" disk-name ".img")
+                            "-m" (number->string mem) "-net" "nic,model=virtio" "-net" "user"
+                            "-append"
+                            (string-append "ks=http://" (cfg 'vminstall:qemu-local-addr) ":"
+                                           (number->string (cfg 'vminstall:http-port)) "/ipvsts.ks")
+                            "-vnc"
+                            (string-append ":" (number->string (1+ (cfg 'test:vm:vnc-base))))))
          (pid (primitive-fork)))
     (cond ((= pid 0)
            (let ()
-             (ipvsts:log "installing vm ~A" args)
-             (apply system* args)
+             (ipvsts:log "installing vm ~A" system-args)
+             (apply system* system-args)
              (exit 0)))
           (#t
-           (let ((http-port (httpd:init "127.0.0.1" 8888)))
+           (let ((http-port (httpd:init "127.0.0.1" (cfg 'vminstall:http-port))))
              (ipvsts:log "waiting for qemu to download kickstart")
              (httpd:accept http-port http-server)
              (ipvsts:log "kickstart downloaded")

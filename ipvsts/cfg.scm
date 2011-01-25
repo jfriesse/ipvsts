@@ -72,11 +72,14 @@
      (test:vm:net . 'user)
      (test:vm:vnc-base . 10)
      (test:vm:rguile-port-base . 2300)
-     (vminstall:http-path:vmlinuz . "images/pxeboot/vmlinuz")
-     (vminstall:http-path:initrd . "images/pxeboot/initrd.img")
+     (test:distro . 'el6)
      (vminstall:disk:format . "qcow2")
      (vminstall:disk:name . "base")
-     (test:distro . 'el6)))
+     (vminstall:http-path:vmlinuz . "images/pxeboot/vmlinuz")
+     (vminstall:http-path:initrd . "images/pxeboot/initrd.img")
+     (vminstall:http-port . 8888)
+     (vminstall:qemu-local-addr . "10.0.2.2")
+     (vminstall:mem . 512)))
 
   ;; Computed values
   (set-cfg! 'ipvsts:vm-dir (string-append (getenv "HOME") "/vms"))
