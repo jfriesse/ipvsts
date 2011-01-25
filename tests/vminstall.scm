@@ -32,8 +32,8 @@
 ;; Download initrd and kernel files and saves them in ipvsts:vm-dir
 (define (vminstall:download)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (vmlinuz-path (string-append (cfg 'test:install-url) "/images/pxeboot/vmlinuz"))
-         (initrd-path (string-append (cfg 'test:install-url) "/images/pxeboot/initrd.img")))
+         (vmlinuz-path (string-append (cfg 'test:install-url) "/" (cfg 'vminstall:http-path:vmlinuz)))
+         (initrd-path (string-append (cfg 'test:install-url) "/" (cfg 'vminstall:http-path:initrd))))
     (ipvsts:log "creating ~A" vm-dir)
     (mkdir-safe vm-dir)
     (ipvsts:log "download ~A" vmlinuz-path)
@@ -42,16 +42,18 @@
     (http-get-file (string-append vm-dir "/initrd.img") initrd-path)))
 
 ;; Create base image ipvsts:vm-dir/test:name named base.img with qcow2 format
-(define (vminstall:disk-create)
+(define (vminstall:disk-create . args)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (args (string-append (cfg 'ipvsts:qemu-img) " create -f qcow2 "
-                              (string-append vm-dir "/base.img") " "
-                              (cfg 'ipvsts:vm-disk-size) " >/dev/null"))
-         (stat (system args)))
+         (disk-name (get-param-val 'name 'vminstall:disk:name args))
+         (disk-size (get-param-val 'size 'ipvsts:vm-disk-size args))
+         (system-args (string-append
+                       (cfg 'ipvsts:qemu-img) " create -f " (cfg 'vminstall:disk:format)
+                       " " vm-dir "/" disk-name ".img" " " disk-size " >/dev/null"))
+         (stat (system system-args)))
     (ipvsts:log "creating image ~A return val ~A" args (status:exit-val stat))
     (if (= (status:exit-val stat) 0) #t #f)))
 
-;; Returns EL6 style kickstart
+;; Returns kickstart
 (define (vminstall:create-ks)
   (define (append-file port from-file to-file)
     (let ((path (find-file-in-lpath from-file)))

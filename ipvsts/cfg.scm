@@ -23,7 +23,8 @@
 
 (define-module (ipvsts cfg))
 
-(export cfg set-cfg! set-alist-cfg! set-unsetcfg! set-alist-unsetcfg!)
+(export cfg set-cfg! set-alist-cfg! set-unsetcfg! set-alist-unsetcfg!
+        get-param-val)
 
 (define cfg-ht (make-hash-table))
 
@@ -70,7 +71,12 @@
      (test:vm:mem . 128)
      (test:vm:net . 'user)
      (test:vm:vnc-base . 10)
-     (test:vm:rguile-port-base . 2300)))
+     (test:vm:rguile-port-base . 2300)
+     (vminstall:http-path:vmlinuz . "images/pxeboot/vmlinuz")
+     (vminstall:http-path:initrd . "images/pxeboot/initrd.img")
+     (vminstall:disk:format . "qcow2")
+     (vminstall:disk:name . "base")))
+
   ;; Computed values
   (set-cfg! 'ipvsts:vm-dir (string-append (getenv "HOME") "/vms"))
   (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-default.log"))
@@ -80,6 +86,14 @@
 (define (load-user-defaults!)
   (if (access? (string-append (getenv "HOME") "/.ipvsts") R_OK)
     (load (string-append (getenv "HOME") "/.ipvsts"))))
+
+;; Return value of parameter. If args is null, or no name-arg is found in
+;; assoc list (car args), name-cfg from cfg is returned. Othervise value from
+;; assoc list.
+(define (get-param-val name-arg name-cfg args)
+  (if (and (not (null? args)) (assoc name-arg (car args)))
+      (cdr (assoc name-arg (car args)))
+      (cfg name-cfg)))
 
 (set-defaults!)
 (load-user-defaults!)
