@@ -75,7 +75,8 @@
      (vminstall:http-path:vmlinuz . "images/pxeboot/vmlinuz")
      (vminstall:http-path:initrd . "images/pxeboot/initrd.img")
      (vminstall:disk:format . "qcow2")
-     (vminstall:disk:name . "base")))
+     (vminstall:disk:name . "base")
+     (test:distro . 'el6)))
 
   ;; Computed values
   (set-cfg! 'ipvsts:vm-dir (string-append (getenv "HOME") "/vms"))

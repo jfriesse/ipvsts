@@ -53,8 +53,8 @@
     (ipvsts:log "creating image ~A return val ~A" args (status:exit-val stat))
     (if (= (status:exit-val stat) 0) #t #f)))
 
-;; Returns kickstart
-(define (vminstall:create-ks)
+;; Returns kickstart. args may contain format with value el5 or el6
+(define (vminstall:create-ks . args)
   (define (append-file port from-file to-file)
     (let ((path (find-file-in-lpath from-file)))
       (if path
@@ -67,16 +67,37 @@
                   (close file))))
           #f)))
 
-  (let ((os (open-output-string)))
+  (let ((format (get-param-val 'format 'test:distro args))
+        (os (open-output-string)))
     (simple-format os "install\nurl --url=~A\n" (cfg 'test:install-url))
     (display "text\nlang en_US.UTF-8\nkeyboard us\n" os)
+
+    (if (equal? format 'el5)
+        (display "key --skip\n" os))
+
     (display "network --bootproto=dhcp\n" os)
     (display "zerombr\n" os)
     (display "clearpart --all --initlabel\npart / --size=1024 --grow\npart swap --size=128\n" os)
-    (simple-format os "bootloader\ntimezone --utc UTC\nrootpw --plaintext ~A\n"
-                   (cfg 'ipvsts:vm-passwd))
+    (display "bootloader\ntimezone --utc UTC\n" os)
+
+    (cond ((equal? format 'el5)
+           (simple-format os "rootpw ~A\n" (cfg 'ipvsts:vm-passwd)))
+          (#t
+           (simple-format os "rootpw --plaintext ~A\n" (cfg 'ipvsts:vm-passwd))))
+
     (display "firewall --disabled\nfirstboot --disabled\nselinux --enforcing\nskipx\npoweroff\n" os)
-    (display "%packages --nobase\n@Core --nodefaults\nyum\nguile\n%end\n" os)
+    (display "%packages --nobase\n" os)
+
+    (cond ((equal? format 'el5)
+           (display "@Core\n" os))
+          (#t
+           (display "@Core --nodefaults\n" os)))
+
+    (display "yum\nguile\n" os)
+
+    (if (not (equal? format 'el5))
+        (display "%end\n" os))
+
     (display "%post\n" os)
 
     (if (not (and
@@ -87,7 +108,8 @@
           (display "chmod 755 /usr/local/bin/ipvsts-rguile.scm /etc/rc.d/init.d/ipvsts-rguile\n" os)
           (display "/sbin/chkconfig --add ipvsts-rguile\n" os)
           (display "/sbin/chkconfig ipvsts-rguile on\n" os)
-          (display "%end\n" os)
+          (if (not (equal? format 'el5))
+              (display "%end\n" os))
 
           (let ((res (get-output-string os)))
             (close os)
