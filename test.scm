@@ -46,7 +46,9 @@
 ;; (vminstall:disk-create)
 ;; (vminstall:run-install))
 
-(display (vm:start "c1" 1 '((mem . 512))))
+;;(display (vm:start "c1" 1 '((mem . 512))))
+
+;;(display (vm:sh:get-file "/etc/redhat-release"))
 ;(set-cfg! 'test:arch "i386")
 ;(set-cfg! 'test:version "U5")
 ;(set-cfg! 'test:name "rhel-5")

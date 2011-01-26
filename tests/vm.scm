@@ -28,7 +28,8 @@
 (use-modules (ipvsts netfuncs))
 (use-modules (rguile client))
 
-(export vm:disk:create-snapshot vm:disk:compress vm:start)
+(export vm:disk:create-snapshot vm:disk:compress vm:start
+        vm:sh:run-command vm:sh:create-file vm:sh:get-file)
 
 ;; Create snapshot from image (name can be in assoc list in 'name key, or test:disk:name) and
 ;; result image is in new-img
@@ -149,3 +150,30 @@
                    (let ()
                      (ipvsts:log "VM failed to start")
                      #f)))))))
+
+;; Run system command on remote guile cl
+(define (vm:sh:run-command cl command)
+  (cl `(system ,command)))
+
+;; Create file output from input-str string on remote guile cl
+(define (vm:sh:create-file cl input-str output)
+  (cl
+   `(let ((f (open-file ,output "w")))
+      (display ,input-str f)
+      (close f))))
+
+;; Retreive file remote guile cl
+;; Return #f if file is not found otherwise string with file content
+(define (vm:sh:get-file cl file)
+  (cl
+   `(if (access? ,file R_OK)
+        (let ((f (open-file ,file "r"))
+              (s (open-output-string)))
+          (do ((readed (read-char f) (read-char f)))
+              ((eof-object? readed))
+            (write-char readed s))
+          (let ((res (get-output-string s)))
+            (close f)
+            (close s)
+            res))
+        #f)))
