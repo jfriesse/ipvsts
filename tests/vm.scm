@@ -26,8 +26,9 @@
 (use-modules (ipvsts logging))
 (use-modules (ipvsts utils))
 (use-modules (ipvsts netfuncs))
+(use-modules (rguile client))
 
-(export vm:disk:create-snapshot vm:disk:compress)
+(export vm:disk:create-snapshot vm:disk:compress vm:start)
 
 ;; Create snapshot from image (name can be in assoc list in 'name key, or test:disk:name) and
 ;; result image is in new-img
@@ -66,3 +67,85 @@
         (let ()
           (delete-file new-tmp-disk-name)
           #f))))
+
+;; Start virtual machine with name and order
+;; args (assoc list) may contain mem (amount of memory to give to vm) and
+;; net (network configuration). Net is in format ([user | (net . net_id)]*)
+;; Return #t on success, otherwise #f
+(define (vm:start name order . args)
+  (define (get-net-qemu-params order params)
+    (define (iter params i res)
+      (if (null? params) res
+          (let ((nic-params
+                 (list "-net" (simple-format #f "nic,vlan=~A,model=virtio,macaddr=~A"
+                                             i
+                                             (simple-format #f (cfg 'test:vm:macaddr)
+                                                            (byte->hexstr order)
+                                                            (byte->hexstr i))))))
+            (cond  ((equal? (car params) 'user)
+                    (iter (cdr params)
+                          (+ i 1)
+                          (append res nic-params
+                                  (list "-net" (simple-format #f "user,vlan=~A" i)))))
+                   (#t
+                    (iter (cdr params)
+                          (+ i 1)
+                          (append res nic-params
+                                  (list "-net"
+                                        (simple-format
+                                         #f "socket,vlan=~A,mcast=~A:~A"
+                                         i (cfg 'test:vm:mcast-addr)
+                                         (+ (cfg 'test:vm:mcast-port-base) (cdar params)))))))))))
+    (iter params 0 '()))
+
+  (if (wait-for-tcp-port "127.0.0.1" (+ order (cfg 'test:vm:rguile-port-base)) 0)
+      (let ()
+        (ipvsts:log "qemu serial port ~A is already used"
+                    (+ order (cfg 'test:vm:rguile-port-base)))
+        #f)
+      (let* ((mem (get-param-val 'mem 'test:vm:mem args))
+             (net (get-param-val 'net 'test:vm:net args))
+             (vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
+             (net-args (get-net-qemu-params order net))
+             (vm-args (append (list (cfg 'ipvsts:qemu)
+                                    "-hda" (string-append vm-dir "/" name ".img")
+                                    "-m" (number->string mem)
+                                    "-vnc" (string-append
+                                            ":"
+                                            (number->string (+ order (cfg 'test:vm:vnc-base))))
+                                    "-serial"
+                                    (string-append "tcp:127.0.0.1:"
+                                                   (number->string
+                                                    (+ order (cfg 'test:vm:rguile-port-base)))
+                                                   ",server,nowait"))
+                              net-args))
+             (pid (primitive-fork)))
+        (cond ((= pid 0)
+               (let ()
+                 (ipvsts:log "Running vm ~A" vm-args)
+                 (apply execlp (append (list (car vm-args)) vm-args))))
+              (#t
+               (ipvsts:log "waiting for qemu to boot up vm")
+               ;; Give qemu some time to boot and also
+               ;; test if process is not hunged
+               (if (and
+                    (wait-for-tcp-port "127.0.0.1"
+                                       (+ order (cfg 'test:vm:rguile-port-base))
+                                       (cfg 'test:vm:max-qemu-start-time))
+                    (= (car (waitpid pid WNOHANG)) 0))
+                   (let ()
+                     (if (rguile-client-wait-for-operational-state
+                          "127.0.0.1"
+                          (+ order (cfg 'test:vm:rguile-port-base))
+                          (cfg 'test:vm:max-boot-time))
+                         (let ()
+                           #t)
+                         (let ()
+                           (ipvsts:log "wait for operational client exceed time limit ~A"
+                                       (cfg 'test:vm:max-boot-time))
+                           (kill pid SIGINT)
+                           (waitpid pid)
+                           #f)))
+                   (let ()
+                     (ipvsts:log "VM failed to start")
+                     #f)))))))

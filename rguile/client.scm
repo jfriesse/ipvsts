@@ -79,7 +79,7 @@
 
 ;; Wait for operational state but maximum for max-time seconds.
 ;; Returns #t if client is in operational state or #f on timeout
-(define (rguile-client-wait-for-operational-state host port to-eval max-time)
+(define (rguile-client-wait-for-operational-state host port max-time)
   (define (one-iter s)
     (display "1\n" s)
 

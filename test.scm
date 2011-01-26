@@ -46,52 +46,7 @@
 ;; (vminstall:disk-create)
 ;; (vminstall:run-install))
 
-(define (vm:start name order . args)
-  (define (get-net-qemu-params order params)
-    (define (iter params i res)
-      (if (null? params) res
-          (let ((nic-params
-                 (list "-net" (simple-format #f "nic,vlan=~A,model=virtio,macaddr=~A"
-                                             i
-                                             (simple-format #f (cfg 'test:vm:macaddr)
-                                                            (byte->hexstr order)
-                                                            (byte->hexstr i))))))
-            (cond  ((equal? (car params) 'user)
-                    (iter (cdr params)
-                          (+ i 1)
-                          (append res nic-params
-                                  (list "-net" (simple-format #f "user,vlan=~A" i)))))
-                   (#t
-                    (iter (cdr params)
-                          (+ i 1)
-                          (append res nic-params
-                                  (list "-net"
-                                        (simple-format
-                                         #f "socket,vlan=~A,mcast=~A:~A"
-                                         i (cfg 'test:vm:mcast-addr)
-                                         (+ (cfg 'test:vm:mcast-port-base) (cdar params)))))))))))
-    (iter params 0 '()))
-
-  (let* ((mem (get-param-val 'mem 'test:vm:mem args))
-         (net (get-param-val 'net 'test:vm:net args))
-         (vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (net-args (get-net-qemu-params order net))
-         (vm-args (append (list (cfg 'ipvsts:qemu)
-                     "-hda" (string-append vm-dir "/" name ".img")
-                     "-m" (number->string mem)
-                     "-vnc" (string-append ":" (number->string (+ order (cfg 'test:vm:vnc-base))))
-                     "-serial"
-                     (string-append "tcp:127.0.0.1:"
-                                    (number->string (+ order (cfg 'test:vm:rguile-port-base)))
-                                    ",server,nowait"))
-                     net-args)))
-    vm-args))
-
-(display (vm:start "c1" 2))
-;;'((net . (user ))))
-           (display (vm:start "c1" 2 '((net . (user (net . 1) (net . 2) (net . 3))))))
-;; (apply system* (vm:start "c1" 2 '((net . both))))
-
+(display (vm:start "c1" 1 '((mem . 512))))
 ;(set-cfg! 'test:arch "i386")
 ;(set-cfg! 'test:version "U5")
 ;(set-cfg! 'test:name "rhel-5")

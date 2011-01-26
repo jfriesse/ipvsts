@@ -75,6 +75,7 @@
      (test:vm:macaddr . "52:54:00:00:~A:~A")
      (test:vm:mcast-addr . "239.255.0.1")
      (test:vm:mcast-port-base . 4096)
+     (test:vm:max-qemu-start-time . 10)
      (test:distro . 'el6)
      (vminstall:disk:format . "qcow2")
      (vminstall:disk:name . "base")
@@ -88,6 +89,7 @@
   (set-cfg! 'ipvsts:vm-dir (string-append (getenv "HOME") "/vms"))
   (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-default.log"))
   (set-cfg! 'vminstall:max-install-time (* 60 60))
+  (set-cfg! 'test:vm:max-boot-time (* 5 60))
   (set-cfg! 'test:disk:name (cfg 'vminstall:disk:name)))
 
 ;; Load user defaults from ~/.ipvsts if such file exists
