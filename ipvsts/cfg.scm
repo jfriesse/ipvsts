@@ -87,7 +87,8 @@
   ;; Computed values
   (set-cfg! 'ipvsts:vm-dir (string-append (getenv "HOME") "/vms"))
   (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-default.log"))
-  (set-cfg! 'test:vm:max-install-time (* 60 60)))
+  (set-cfg! 'vminstall:max-install-time (* 60 60))
+  (set-cfg! 'test:disk:name (cfg 'vminstall:disk:name)))
 
 ;; Load user defaults from ~/.ipvsts if such file exists
 (define (load-user-defaults!)

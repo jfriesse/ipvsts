@@ -32,8 +32,10 @@
 ;; Download initrd and kernel files and saves them in ipvsts:vm-dir
 (define (vminstall:download)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (vmlinuz-path (string-append (cfg 'test:install-url) "/" (cfg 'vminstall:http-path:vmlinuz)))
-         (initrd-path (string-append (cfg 'test:install-url) "/" (cfg 'vminstall:http-path:initrd))))
+         (vmlinuz-path (string-append (cfg 'test:install-url) "/"
+                                      (cfg 'vminstall:http-path:vmlinuz)))
+         (initrd-path (string-append (cfg 'test:install-url) "/"
+                                     (cfg 'vminstall:http-path:initrd))))
     (ipvsts:log "creating ~A" vm-dir)
     (mkdir-safe vm-dir)
     (ipvsts:log "download ~A" vmlinuz-path)

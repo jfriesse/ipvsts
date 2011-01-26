@@ -32,6 +32,7 @@
 (use-modules (rguile client))
 
 (use-modules (tests vminstall))
+(use-modules (tests vm))
 
 (set-cfg! 'test:arch "i386")
 (set-cfg! 'test:version "6.0")
