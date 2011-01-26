@@ -27,7 +27,8 @@
 (use-modules (ipvsts utils))
 
 (export uri-parse net-getip net-getport http-get
-        httpd:init httpd:accept http-get-file http-serve-string10)
+        httpd:init httpd:accept http-get-file http-serve-string10
+        wait-for-tcp-port)
 
 ;; Parse uri (protocol://host:port/root_path) string to list in form
 ;; (protocol host port root_path) or #f if uri is invalid. port may be
@@ -164,3 +165,28 @@
   (let ((f (open-input-string str)))
     (port-cat f port)
     (close f)))
+
+;; Wait for availibility of tcp port on host but maximum for max-time seconds.
+;; Returns #t if port is available to connect, otherwise #f.
+;; It's possible to use max-time <= 0 to just one proble
+(define (wait-for-tcp-port host port max-time)
+  (define (probe s)
+    (catch #t
+      (lambda ()
+        (connect s AF_INET (inet-pton AF_INET host) port)
+        #t)
+      (lambda (key . args)
+        #f)))
+
+  (let* ((s (socket PF_INET SOCK_STREAM 0))
+         (t (current-time))
+         (wait-res
+          (if (<= max-time 0)
+              (probe s)
+              (let ()
+                (while (and (< (- (current-time) t) max-time)
+                            (not (probe s)))
+                  (sleep 1))
+                (if (< (- (current-time) t) max-time) #t #f)))))
+    (close s)
+    wait-res))
