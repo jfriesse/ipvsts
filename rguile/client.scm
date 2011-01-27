@@ -66,7 +66,8 @@
   (let ((res
          (cond ((string? to-eval) (rguile-client-stat host port to-eval))
                (#t (rguile-client-stat host port (simple-format #f "~S" to-eval))))))
-    (cond ((null? (cdr res)) *unspecified*)
+    (cond ((eof-object? res) res)
+          ((null? (cdr res)) *unspecified*)
           ((equal? (car res) 'ok) (cadr res))
           ((equal? (car res) 'error) (error (cadr res)))
           (#t (error 'unknown-output)))))
