@@ -76,6 +76,7 @@
      (test:vm:mcast-addr . "239.255.0.1")
      (test:vm:mcast-port-base . 4096)
      (test:vm:max-qemu-start-time . 10)
+     (test:vm:sh:cmd:poweroff . "/sbin/poweroff")
      (test:distro . 'el6)
      (vminstall:disk:format . "qcow2")
      (vminstall:disk:name . "base")

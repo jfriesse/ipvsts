@@ -29,7 +29,8 @@
 (use-modules (rguile client))
 
 (export vm:disk:create-snapshot vm:disk:compress vm:start
-        vm:sh:run-command vm:sh:create-file vm:sh:get-file)
+        vm:sh:run-command vm:sh:create-file vm:sh:get-file
+        vm:sh:shutdown)
 
 ;; Create snapshot from image (name can be in assoc list in 'name key, or test:disk:name) and
 ;; result image is in new-img
@@ -177,3 +178,16 @@
             (close s)
             res))
         #f)))
+
+;; Poweroff vm. If clean is set, clean shutdown is proceed, otherwise
+;; unclean (-nf) shutdown is proceeed.
+(define (vm:sh:shutdown cl clean)
+  (let ((res
+         (vm:sh:run-command
+          cl
+          (string-append (cfg 'test:vm:sh:cmd:poweroff)
+                         " "
+                         (if (not clean) "-nf" "")))))
+    (cond ((eof-object? res) #t)
+          ((= res 0) #t)
+          (#t #f))))
