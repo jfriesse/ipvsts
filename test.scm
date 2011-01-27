@@ -46,7 +46,48 @@
 ;; (vminstall:disk-create)
 ;; (vminstall:run-install))
 
-;;(display (vm:start "c1" 1 '((mem . 512))))
+(set-cfg! 'test:vm:sh:cmd:service "/sbin/service")
+(set-cfg! 'test:vm:ip:addr "192.168.~A.~A")
+(set-cfg! 'test:vm:ip:mask "255.255.255.0")
+
+(define (vm:configure-net cl order net)
+  (define (gen-ifcfg-file pos net)
+    (let ((prefix-str
+           (simple-format
+            #f
+            (string-append "DEVICE=\"eth~A\"\nHWADDR=\"~A\"\n"
+                           "NM_CONTROLLED=\"no\"\nONBOOT=\"yes\"\n")
+            pos
+            (simple-format #f (cfg 'test:vm:macaddr)
+                           (byte->hexstr order)
+                           (byte->hexstr pos)))))
+      (cond ((equal? net 'user)
+             (string-append prefix-str "BOOTPROTO=\"dhcp\"\n"))
+          (#t
+           (simple-format #f "~AIPADDR=\"~A\"\nNETMASK=\"~A\"\n"
+                          prefix-str
+                          (simple-format #f
+                                         (cfg 'test:vm:ip:addr)
+                                         (cdr net)
+                                         order)
+                          (cfg 'test:vm:ip:mask))))))
+  (and
+   (let ()
+     (ipvsts:log "Stopping network")
+     (= (vm:sh:run-command
+         cl
+         (string-append (cfg 'test:vm:sh:cmd:service)
+                        " network stop")) 0))
+   (let ()
+     (ipvsts:log "Starting network")
+     (= (vm:sh:run-command
+         cl
+         (string-append (cfg 'test:vm:sh:cmd:service)
+                        " network start")) 0))))
+
+;; (vm:configure-net cl 1 '(user))
+;; (define cl (rguile-client "127.0.0.1" 2301))
+;; (display (vm:start "c1" 1 '((mem . 512) (net . (user)))))
 
 ;;(display (vm:sh:get-file "/etc/redhat-release"))
 ;(set-cfg! 'test:arch "i386")
