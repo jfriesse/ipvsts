@@ -39,6 +39,8 @@
 (set-cfg! 'test:name "rhel-6")
 (set-cfg! 'test:install-url (string-append (cfg 'ipvsts:http-mirror) "/released/RHEL-6-Server/"
                                            (cfg 'test:version) "/" (cfg 'test:arch) "/os"))
+(set-cfg! 'test:update-url (string-append (cfg 'ipvsts:http-mirror) "/nightly/latest-RHEL6.1/6/Server"
+                                           "/" (cfg 'test:arch) "/os"))
 (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-" (cfg 'test:name) ".log"))
 
 ;;(ipvsts:check
@@ -46,6 +48,47 @@
 ;; (vminstall:disk-create)
 ;; (vminstall:run-install))
 
+(set-cfg! 'test:vm:sh:yum-repos-dir "/etc/yum.repos.d")
+(set-cfg! 'test:vm:sh:cmd:yum "/usr/bin/yum")
+
+(define (vm:sh:add-yum-repo cl repo url)
+  (vm:sh:create-file cl
+                     (simple-format #f
+                                    "[~A]\nname=~A\nbaseurl=~A\nenabled=1\ngpgcheck=0\n"
+                                    repo
+                                    repo
+                                    url)
+                     (string-append (cfg 'test:vm:sh:yum-repos-dir) "/" repo ".repo")))
+
+(define (vm:sh:add-int-yum-repo cl repo)
+  (vm:sh:add-yum-repo cl repo (string-append (cfg 'test:install-url) "/" repo)))
+
+(define (vm:sh:add-int-update-yum-repo cl repo)
+  (vm:sh:add-yum-repo cl
+                      (string-append repo "-updates")
+                      (string-append (cfg 'test:update-url) "/" repo)))
+
+(define (vm:sh:delete-yum-repo cl repo)
+  (=
+   (vm:sh:run-command cl (string-append (cfg 'test:vm:sh:cmd:rm) " -f "
+                                        (cfg 'test:vm:sh:yum-repos-dir)
+                                        "/" repo ".repo"))
+   0))
+
+(define (vm:sh:yum-update cl)
+  (and
+   (= (vm:sh:run-command cl (string-append (cfg 'test:vm:sh:cmd:yum) " clean all")) 0)
+   (= (vm:sh:run-command cl (string-append (cfg 'test:vm:sh:cmd:yum) " update -y")) 0)
+   (= (vm:sh:run-command cl (string-append (cfg 'test:vm:sh:cmd:yum) " clean all")) 0)))
+
+
+(vm:sh:yum-update (rguile-client "127.0.0.1" 2301))
+(vm:sh:add-int-yum-repo (rguile-client "127.0.0.1" 2301) "Server")
+(vm:sh:add-int-yum-repo (rguile-client "127.0.0.1" 2301) "LoadBalancer")
+(vm:sh:add-int-update-yum-repo (rguile-client "127.0.0.1" 2301) "Server")
+(vm:sh:add-int-update-yum-repo (rguile-client "127.0.0.1" 2301) "LoadBalancer")
+
+(vm:sh:delete-yum-repo (rguile-client "127.0.0.1" 2301) "*")
 (vm:start "c1" 1 '((mem . 512) (net . (user))))
 
 (let ((cl (rguile-client "127.0.0.1" 2301)))
