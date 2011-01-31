@@ -30,7 +30,7 @@
 
 (export vm:disk:create-snapshot vm:disk:compress vm:start
         vm:sh:run-command vm:sh:create-file vm:sh:get-file
-        vm:sh:shutdown)
+        vm:sh:shutdown vm:configure-net)
 
 ;; Create snapshot from image (name can be in assoc list in 'name key, or test:disk:name) and
 ;; result image is in new-img
@@ -191,3 +191,103 @@
     (cond ((eof-object? res) #t)
           ((= res 0) #t)
           (#t #f))))
+
+;; Configure network for virtual machine. cl is rguile client, order is
+;; run order (id) of machine and net is list of networks avalilable for VM.
+;; List can contain user or (net . net_id) items.
+;; Macaddr is generated in format test:vm:macaddr, with two ~A replaced by
+;; order (id) and position of interface in list. IPAddr is taken from
+;; test:vm:ip:addr where two ~A replaced by net_id and order.
+(define (vm:configure-net cl order net)
+  (define (gen-ifcfg-file pos net)
+    (let ((prefix-str
+           (simple-format
+            #f
+            (string-append "DEVICE=\"eth~A\"\nHWADDR=\"~A\"\n"
+                           "NM_CONTROLLED=\"no\"\nONBOOT=\"yes\"\n")
+            pos
+            (simple-format #f (cfg 'test:vm:macaddr)
+                           (byte->hexstr order)
+                           (byte->hexstr pos)))))
+      (cond ((equal? net 'user)
+             (string-append prefix-str "BOOTPROTO=\"dhcp\"\n"))
+          (#t
+           (simple-format #f "~AIPADDR=\"~A\"\nNETMASK=\"~A\"\n"
+                          prefix-str
+                          (simple-format #f
+                                         (cfg 'test:vm:ip:addr)
+                                         (cdr net)
+                                         order)
+                          (cfg 'test:vm:ip:mask))))))
+
+  (define (store-ifcfg-files)
+    (define (iter i net)
+      (cond ((null? net) #t)
+            (#t
+             (if (not
+                  (vm:sh:create-file
+                   cl
+                   (gen-ifcfg-file i (car net))
+                   (simple-format #f "~A/~A"
+                                  (cfg 'test:vm:sh:network-scripts-dir)
+                                  (simple-format #f
+                                                 (cfg 'test:vm:sh:network-scripts-name)
+                                                 i))))
+                 #f
+                 (iter (1+ i) (cdr net))))))
+    (iter 0 net))
+
+  (define (delete-old-ifcfg-files)
+    (=
+     (vm:sh:run-command cl (string-append (cfg 'test:vm:sh:cmd:rm) " -f "
+                                          (cfg 'test:vm:sh:network-scripts-dir)
+                                          "/" (cfg 'test:vm:sh:network-scripts-rm)))
+     0))
+
+  (define (gen-net-udev-rules)
+    (define (iter i net res)
+      (cond ((null? net) res)
+            (#t
+             (iter (1+ i)
+                   (cdr net)
+                   (string-append
+                    res
+                    (simple-format
+                     #f
+                     (cfg 'test:vm:sh:udev-net-str)
+                     (simple-format #f (cfg 'test:vm:macaddr) (byte->hexstr order) (byte->hexstr i))
+                     (simple-format #f "eth~A" i))
+                    "\n")))))
+    (iter 0 net ""))
+
+  (and
+   (let ()
+     (ipvsts:log "Stopping network")
+     (= (vm:sh:run-command
+         cl
+         (string-append (cfg 'test:vm:sh:cmd:service)
+                        " network stop")) 0))
+
+   (let ()
+     (ipvsts:log "Deleting old ifcfg files")
+     (delete-old-ifcfg-files))
+   (let ()
+     (ipvsts:log "Storing new ifcfg files")
+     (store-ifcfg-files))
+   (let ()
+     (ipvsts:log "Storing udev network rules")
+     (vm:sh:create-file cl
+                        (gen-net-udev-rules)
+                        (cfg 'test'vm:sh:udev-net-file)))
+   (let ()
+     (ipvsts:log "Restarting udev")
+     (= (vm:sh:run-command
+         cl
+         (string-append (cfg 'test:vm:sh:cmd:udevadm)
+                        " trigger")) 0))
+   (let ()
+     (ipvsts:log "Starting network")
+     (= (vm:sh:run-command
+         cl
+         (string-append (cfg 'test:vm:sh:cmd:service)
+                        " network start")) 0))))

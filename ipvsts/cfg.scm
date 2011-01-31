@@ -72,11 +72,20 @@
      (test:vm:net . (user))
      (test:vm:vnc-base . 10)
      (test:vm:rguile-port-base . 2300)
+     (test:vm:ip:addr . "192.168.~A.~A")
+     (test:vm:ip:mask . "255.255.255.0")
      (test:vm:macaddr . "52:54:00:00:~A:~A")
      (test:vm:mcast-addr . "239.255.0.1")
      (test:vm:mcast-port-base . 4096)
      (test:vm:max-qemu-start-time . 10)
      (test:vm:sh:cmd:poweroff . "/sbin/poweroff")
+     (test:vm:sh:cmd:rm . "/bin/rm")
+     (test:vm:sh:cmd:service . "/sbin/service")
+     (test:vm:sh:cmd:udevadm . "/sbin/udevadm")
+     (test:vm:sh:network-scripts-dir . "/etc/sysconfig/network-scripts")
+     (test:vm:sh:network-scripts-name . "ifcfg-eth~A")
+     (test:vm:sh:network-scripts-rm . "ifcfg-eth*")
+     (test'vm:sh:udev-net-file . "/etc/udev/rules.d/70-persistent-net.rules")
      (test:distro . 'el6)
      (vminstall:disk:format . "qcow2")
      (vminstall:disk:name . "base")
@@ -89,9 +98,13 @@
   ;; Computed values
   (set-cfg! 'ipvsts:vm-dir (string-append (getenv "HOME") "/vms"))
   (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-default.log"))
-  (set-cfg! 'vminstall:max-install-time (* 60 60))
+  (set-cfg! 'test:disk:name (cfg 'vminstall:disk:name))
   (set-cfg! 'test:vm:max-boot-time (* 5 60))
-  (set-cfg! 'test:disk:name (cfg 'vminstall:disk:name)))
+  (set-cfg! 'test:vm:sh:udev-net-str
+            (string-append "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\""
+                           "~A\", ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\", KERNEL==\"eth*\", NAME=\""
+                           "~A\""))
+  (set-cfg! 'vminstall:max-install-time (* 60 60)))
 
 ;; Load user defaults from ~/.ipvsts if such file exists
 (define (load-user-defaults!)
