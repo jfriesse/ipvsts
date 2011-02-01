@@ -20,7 +20,7 @@
 ;;
 ;; Author: Jan Friesse <jfriesse@redhat.com>
 ;;
-(define-module (tests vminstall))
+(define-module (ipvsts vminstall))
 
 (use-modules (ipvsts cfg))
 (use-modules (ipvsts logging))

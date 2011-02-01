@@ -105,8 +105,8 @@
   (set-cfg! 'test:vm:max-boot-time (* 5 60))
   (set-cfg! 'test:vm:sh:udev-net-str
             (string-append "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\""
-                           "~A\", ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\", KERNEL==\"eth*\", NAME=\""
-                           "~A\""))
+                           "~A\", ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\", KERNEL==\"eth*\", "
+                           "NAME=\"~A\""))
   (set-cfg! 'vminstall:max-install-time (* 60 60)))
 
 ;; Load user defaults from ~/.ipvsts if such file exists
