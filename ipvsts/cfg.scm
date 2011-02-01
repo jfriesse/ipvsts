@@ -68,6 +68,7 @@
      (test:version . "unknown")
      (test:name . "unknown")
      (test:install-url . "unknown")
+     (test:update-url . #f)
      (test:vm:mem . 128)
      (test:vm:net . (user))
      (test:vm:vnc-base . 10)
