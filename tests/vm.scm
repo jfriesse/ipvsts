@@ -26,6 +26,7 @@
 (use-modules (ipvsts logging))
 (use-modules (ipvsts utils))
 (use-modules (ipvsts netfuncs))
+(use-modules (ipvsts vmsh))
 (use-modules (rguile client))
 
 (export vm:disk:create-snapshot vm:disk:compress vm:start
@@ -241,7 +242,7 @@
      (ipvsts:log "Storing udev network rules")
      (vm:sh:create-file cl
                         (gen-net-udev-rules)
-                        (cfg 'test'vm:sh:udev-net-file)))
+                        (cfg 'test:vm:sh:udev-net-file)))
    (let ()
      (ipvsts:log "Restarting udev")
      (= (vm:sh:run-command
