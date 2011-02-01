@@ -25,15 +25,32 @@
 
 (export ipvsts:report-result ipvsts:check)
 
+;; Static variable with tests
+(define ipvsts:check-list '())
+
+(define (ipvsts:check-list-add item)
+  (set! ipvsts:check-list (append ipvsts:check-list (list item))))
+
+(define (ipvsts:check-list-pop)
+  (set! ipvsts:check-list (reverse (cdr (reverse ipvsts:check-list)))))
+
+(define (ipvsts:check-list-get)
+  ipvsts:check-list)
+
 ;; Report result in format [pass|FAIL] ... form to current-output-port
 ;; return result
 (define (ipvsts:report-result result form)
-  (simple-format #t "~A ... ~A\n" (if result "pass" "FAIL") form)
+  (simple-format #t "~A ... ~A: ~A\n" (if result "pass" "FAIL") (ipvsts:check-list-get) form)
   result)
 
 ;; Macro for doing tests
 ;; Takes body, which is multiple expressions and call "and" function
 ;; on every ipvsts:report-result with expr 'expr parameters.
-(define-macro (ipvsts:check . body)
-  `(and
-    ,@(map (lambda (x) `(ipvsts:report-result ,x ',x)) body)))
+(define-macro (ipvsts:check test . body)
+  `(let ()
+     (ipvsts:check-list-add ,test)
+     (let ((result
+            (and
+             ,@(map (lambda (x) `(ipvsts:report-result ,x ',x)) body))))
+       (ipvsts:check-list-pop)
+       result)))
