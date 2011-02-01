@@ -20,7 +20,7 @@
 ;;
 ;; Author: Jan Friesse <jfriesse@redhat.com>
 ;;
-(define-module (tests vm))
+(define-module (ipvsts vm))
 
 (use-modules (ipvsts cfg))
 (use-modules (ipvsts logging))
@@ -29,46 +29,7 @@
 (use-modules (ipvsts vmsh))
 (use-modules (rguile client))
 
-(export vm:disk:create-snapshot vm:disk:compress vm:start
-        vm:configure-net)
-
-;; Create snapshot from image (name can be in assoc list in 'name key, or test:disk:name) and
-;; result image is in new-img
-(define (vm:disk:create-snapshot new-img . args)
-  (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (disk-name (get-param-val 'name 'test:disk:name args))
-         (system-args (string-append
-                       (cfg 'ipvsts:qemu-img) " create -f " (cfg 'vminstall:disk:format) " "
-                       "-o" "backing_file=" vm-dir "/" disk-name ".img"
-                       " " vm-dir "/" new-img ".img"
-                       ">/dev/null"))
-         (stat (system system-args)))
-    (ipvsts:log "creating snapshot ~A return val ~A" system-args (status:exit-val stat))
-    (if (= (status:exit-val stat) 0) #t #f)))
-
-;; Compress image (name can be in assoc list in 'name key, or test:disk:name)
-(define (vm:disk:compress . args)
-  (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (disk-name (get-param-val 'name 'test:disk:name args))
-         (tmp-disk-name (string-append vm-dir "/" "tmpimg-XXXXXX"))
-         (new-tmp-disk-name
-          (let ()
-            (close (mkstemp! tmp-disk-name))
-            tmp-disk-name))
-         (system-args (string-append
-                       (cfg 'ipvsts:qemu-img) " convert -O " (cfg 'vminstall:disk:format) " -c "
-                       " " vm-dir "/" disk-name ".img"
-                       " " new-tmp-disk-name
-                       ">/dev/null"))
-         (stat (system system-args)))
-    (ipvsts:log "compressing image ~A return val ~A" system-args (status:exit-val stat))
-    (if (= (status:exit-val stat) 0)
-        (let ()
-          (rename-file new-tmp-disk-name (string-append vm-dir "/" disk-name ".img"))
-          #t)
-        (let ()
-          (delete-file new-tmp-disk-name)
-          #f))))
+(export vm:start vm:configure-net)
 
 ;; Start virtual machine with name and vm-id
 ;; args (assoc list) may contain mem (amount of memory to give to vm) and
