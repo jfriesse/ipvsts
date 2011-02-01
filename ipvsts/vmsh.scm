@@ -119,7 +119,7 @@
 (define (vm:sh:yum-install cl packages)
   (let* ((cmd (string-append (cfg 'test:vm:sh:cmd:yum) " install -y " packages))
          (res (vm:sh:run-command cl cmd)))
->    (ipvsts:log "Installing packages ~A (~A) result ~A" packages cmd res)
+    (ipvsts:log "Installing packages ~A (~A) result ~A" packages cmd res)
     (= res 0)))
 
 ;; Perform update
