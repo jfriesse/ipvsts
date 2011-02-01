@@ -31,6 +31,7 @@
 (use-modules (ipvsts tunit))
 (use-modules (rguile client))
 
+(use-modules (ipvsts vmsh))
 (use-modules (tests vminstall))
 (use-modules (tests vm))
 
@@ -48,51 +49,18 @@
 ;; (vminstall:disk-create)
 ;; (vminstall:run-install))
 
-(set-cfg! 'test:vm:sh:yum-repos-dir "/etc/yum.repos.d")
-(set-cfg! 'test:vm:sh:cmd:yum "/usr/bin/yum")
-
-(define (vm:sh:add-yum-repo cl repo url)
-  (vm:sh:create-file cl
-                     (simple-format #f
-                                    "[~A]\nname=~A\nbaseurl=~A\nenabled=1\ngpgcheck=0\n"
-                                    repo
-                                    repo
-                                    url)
-                     (string-append (cfg 'test:vm:sh:yum-repos-dir) "/" repo ".repo")))
-
-(define (vm:sh:add-int-yum-repo cl repo)
-  (vm:sh:add-yum-repo cl repo (string-append (cfg 'test:install-url) "/" repo)))
-
-(define (vm:sh:add-int-update-yum-repo cl repo)
-  (vm:sh:add-yum-repo cl
-                      (string-append repo "-updates")
-                      (string-append (cfg 'test:update-url) "/" repo)))
-
-(define (vm:sh:delete-yum-repo cl repo)
-  (=
-   (vm:sh:run-command cl (string-append (cfg 'test:vm:sh:cmd:rm) " -f "
-                                        (cfg 'test:vm:sh:yum-repos-dir)
-                                        "/" repo ".repo"))
-   0))
-
-(define (vm:sh:yum-update cl)
-  (and
-   (= (vm:sh:run-command cl (string-append (cfg 'test:vm:sh:cmd:yum) " clean all")) 0)
-   (= (vm:sh:run-command cl (string-append (cfg 'test:vm:sh:cmd:yum) " update -y")) 0)
-   (= (vm:sh:run-command cl (string-append (cfg 'test:vm:sh:cmd:yum) " clean all")) 0)))
-
-
-(vm:sh:yum-update (rguile-client "127.0.0.1" 2301))
+(ipvsts:check
+(vm:start "c1" 1 '((mem . 512) (net . (user))))
+(let ((cl (rguile-client "127.0.0.1" 2301)))
+  (vm:configure-net cl 1 '(user)))
+(vm:sh:delete-yum-repo (rguile-client "127.0.0.1" 2301) "*")
+(vm:sh:chkconfig (rguile-client "127.0.0.1" 2301) "ipvsadm" "off")
 (vm:sh:add-int-yum-repo (rguile-client "127.0.0.1" 2301) "Server")
 (vm:sh:add-int-yum-repo (rguile-client "127.0.0.1" 2301) "LoadBalancer")
 (vm:sh:add-int-update-yum-repo (rguile-client "127.0.0.1" 2301) "Server")
 (vm:sh:add-int-update-yum-repo (rguile-client "127.0.0.1" 2301) "LoadBalancer")
-
-(vm:sh:delete-yum-repo (rguile-client "127.0.0.1" 2301) "*")
-(vm:start "c1" 1 '((mem . 512) (net . (user))))
-
-(let ((cl (rguile-client "127.0.0.1" 2301)))
-  (vm:configure-net cl 1 '(user)))
+(vm:sh:yum-update (rguile-client "127.0.0.1" 2301))
+(vm:sh:yum-install (rguile-client "127.0.0.1" 2301) "ipvsadm"))
 
 (vm:sh:shutdown (rguile-client "127.0.0.1" 2301) #t)
 

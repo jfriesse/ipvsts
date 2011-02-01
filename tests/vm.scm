@@ -29,8 +29,7 @@
 (use-modules (rguile client))
 
 (export vm:disk:create-snapshot vm:disk:compress vm:start
-        vm:sh:run-command vm:sh:create-file vm:sh:get-file
-        vm:sh:shutdown vm:configure-net)
+        vm:configure-net)
 
 ;; Create snapshot from image (name can be in assoc list in 'name key, or test:disk:name) and
 ;; result image is in new-img
@@ -152,45 +151,9 @@
                      (ipvsts:log "VM failed to start")
                      #f)))))))
 
-;; Run system command on remote guile cl
-(define (vm:sh:run-command cl command)
-  (cl `(system ,command)))
 
-;; Create file output from input-str string on remote guile cl
-(define (vm:sh:create-file cl input-str output)
-  (cl
-   `(let ((f (open-file ,output "w")))
-      (display ,input-str f)
-      (close f))))
 
-;; Retreive file remote guile cl
-;; Return #f if file is not found otherwise string with file content
-(define (vm:sh:get-file cl file)
-  (cl
-   `(if (access? ,file R_OK)
-        (let ((f (open-file ,file "r"))
-              (s (open-output-string)))
-          (do ((readed (read-char f) (read-char f)))
-              ((eof-object? readed))
-            (write-char readed s))
-          (let ((res (get-output-string s)))
-            (close f)
-            (close s)
-            res))
-        #f)))
 
-;; Poweroff vm. If clean is set, clean shutdown is proceed, otherwise
-;; unclean (-nf) shutdown is proceeed.
-(define (vm:sh:shutdown cl clean)
-  (let ((res
-         (vm:sh:run-command
-          cl
-          (string-append (cfg 'test:vm:sh:cmd:poweroff)
-                         " "
-                         (if (not clean) "-nf" "")))))
-    (cond ((eof-object? res) #t)
-          ((= res 0) #t)
-          (#t #f))))
 
 ;; Configure network for virtual machine. cl is rguile client, order is
 ;; run order (id) of machine and net is list of networks avalilable for VM.
