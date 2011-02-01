@@ -70,19 +70,19 @@
           (delete-file new-tmp-disk-name)
           #f))))
 
-;; Start virtual machine with name and order
+;; Start virtual machine with name and vm-id
 ;; args (assoc list) may contain mem (amount of memory to give to vm) and
 ;; net (network configuration). Net is in format ([user | (net . net_id)]*)
 ;; Return #t on success, otherwise #f
-(define (vm:start name order . args)
-  (define (get-net-qemu-params order params)
+(define (vm:start name vm-id . args)
+  (define (get-net-qemu-params vm-id params)
     (define (iter params i res)
       (if (null? params) res
           (let ((nic-params
                  (list "-net" (simple-format #f "nic,vlan=~A,model=virtio,macaddr=~A"
                                              i
                                              (simple-format #f (cfg 'test:vm:macaddr)
-                                                            (byte->hexstr order)
+                                                            (byte->hexstr vm-id)
                                                             (byte->hexstr i))))))
             (cond  ((equal? (car params) 'user)
                     (iter (cdr params)
@@ -100,25 +100,25 @@
                                          (+ (cfg 'test:vm:mcast-port-base) (cdar params)))))))))))
     (iter params 0 '()))
 
-  (if (wait-for-tcp-port "127.0.0.1" (+ order (cfg 'test:vm:rguile-port-base)) 0)
+  (if (wait-for-tcp-port "127.0.0.1" (+ vm-id (cfg 'test:vm:rguile-port-base)) 0)
       (let ()
         (ipvsts:log "qemu serial port ~A is already used"
-                    (+ order (cfg 'test:vm:rguile-port-base)))
+                    (+ vm-id (cfg 'test:vm:rguile-port-base)))
         #f)
       (let* ((mem (get-param-val 'mem 'test:vm:mem args))
              (net (get-param-val 'net 'test:vm:net args))
              (vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-             (net-args (get-net-qemu-params order net))
+             (net-args (get-net-qemu-params vm-id net))
              (vm-args (append (list (cfg 'ipvsts:qemu)
                                     "-hda" (string-append vm-dir "/" name ".img")
                                     "-m" (number->string mem)
                                     "-vnc" (string-append
                                             ":"
-                                            (number->string (+ order (cfg 'test:vm:vnc-base))))
+                                            (number->string (+ vm-id (cfg 'test:vm:vnc-base))))
                                     "-serial"
                                     (string-append "tcp:127.0.0.1:"
                                                    (number->string
-                                                    (+ order (cfg 'test:vm:rguile-port-base)))
+                                                    (+ vm-id (cfg 'test:vm:rguile-port-base)))
                                                    ",server,nowait"))
                               net-args))
              (pid (primitive-fork)))
@@ -132,13 +132,13 @@
                ;; test if process is not hunged
                (if (and
                     (wait-for-tcp-port "127.0.0.1"
-                                       (+ order (cfg 'test:vm:rguile-port-base))
+                                       (+ vm-id (cfg 'test:vm:rguile-port-base))
                                        (cfg 'test:vm:max-qemu-start-time))
                     (= (car (waitpid pid WNOHANG)) 0))
                    (let ()
                      (if (rguile-client-wait-for-operational-state
                           "127.0.0.1"
-                          (+ order (cfg 'test:vm:rguile-port-base))
+                          (+ vm-id (cfg 'test:vm:rguile-port-base))
                           (cfg 'test:vm:max-boot-time))
                          (let ()
                            #t)
@@ -156,13 +156,13 @@
 
 
 
-;; Configure network for virtual machine. cl is rguile client, order is
+;; Configure network for virtual machine. cl is rguile client, vm-id is
 ;; run order (id) of machine and net is list of networks avalilable for VM.
 ;; List can contain user or (net . net_id) items.
 ;; Macaddr is generated in format test:vm:macaddr, with two ~A replaced by
-;; order (id) and position of interface in list. IPAddr is taken from
-;; test:vm:ip:addr where two ~A replaced by net_id and order.
-(define (vm:configure-net cl order net)
+;; vm-id and position of interface in list. IPAddr is taken from
+;; test:vm:ip:addr where two ~A replaced by net_id and vm-id.
+(define (vm:configure-net cl vm-id net)
   (define (gen-ifcfg-file pos net)
     (let ((prefix-str
            (simple-format
@@ -171,7 +171,7 @@
                            "NM_CONTROLLED=\"no\"\nONBOOT=\"yes\"\n")
             pos
             (simple-format #f (cfg 'test:vm:macaddr)
-                           (byte->hexstr order)
+                           (byte->hexstr vm-id)
                            (byte->hexstr pos)))))
       (cond ((equal? net 'user)
              (string-append prefix-str "BOOTPROTO=\"dhcp\"\n"))
@@ -181,7 +181,7 @@
                           (simple-format #f
                                          (cfg 'test:vm:ip:addr)
                                          (cdr net)
-                                         order)
+                                         vm-id)
                           (cfg 'test:vm:ip:mask))))))
 
   (define (store-ifcfg-files)
@@ -219,7 +219,7 @@
                     (simple-format
                      #f
                      (cfg 'test:vm:sh:udev-net-str)
-                     (simple-format #f (cfg 'test:vm:macaddr) (byte->hexstr order) (byte->hexstr i))
+                     (simple-format #f (cfg 'test:vm:macaddr) (byte->hexstr vm-id) (byte->hexstr i))
                      (simple-format #f "eth~A" i))
                     "\n")))))
     (iter 0 net ""))
