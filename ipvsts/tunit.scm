@@ -23,7 +23,7 @@
 
 (define-module (ipvsts tunit))
 
-(export ipvsts:report-result ipvsts:check)
+(export ipvsts:report-result ipvsts:check ipvsts:check-list-add ipvsts:check-list-pop)
 
 ;; Static variable with tests
 (define ipvsts:check-list '())
