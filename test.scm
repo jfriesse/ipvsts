@@ -36,6 +36,8 @@
 (use-modules (ipvsts vminstall))
 (use-modules (ipvsts vm))
 
+(use-modules (tests vmcreate))
+
 (set-cfg! 'test:arch "i386")
 (set-cfg! 'test:version "6.0")
 (set-cfg! 'test:name "rhel-6")
@@ -46,46 +48,34 @@
                                           "/" (cfg 'test:arch) "/os"))
 (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-" (cfg 'test:name) ".log"))
 
-;(ipvsts:check 'vminstall
-; (vminstall:download)
-; (vminstall:disk-create)
-; (vminstall:run-install))
-
-;;(vm:start "c1" 1 '((mem . 512) (net . (user))))
-;;(let ((cl (rguile-client "127.0.0.1" 2301)))
-;;  (vm:sh:create-file cl "ahoj" "/tmp/bla"))
-;;  (vm:configure-net cl 1 '(user)))
-
+(ipvsts:check 'test
+              (test:vmcreate))
 
 (ipvsts:check
- 'AHOJ
- (call-with-cfg
-  '((test:vm:mem . 512)
-    (test:vm:net . (user)))
-  (lambda ()
-    (vm:start "base" 1)))
- (let ((cl (rguile-client "127.0.0.1" 2301)))
-   (vm:configure-net cl 1 '(user)))
-(vm:sh:delete-yum-repo (rguile-client "127.0.0.1" 2301) "*")
-;;(vm:sh:chkconfig (rguile-client "127.0.0.1" 2301) "ipvsadm" "off")
-(vm:sh:add-int-yum-repo (rguile-client "127.0.0.1" 2301) "Server")
-(vm:sh:add-int-yum-repo (rguile-client "127.0.0.1" 2301) "LoadBalancer")
-(vm:sh:add-int-update-yum-repo (rguile-client "127.0.0.1" 2301) "Server")
-(vm:sh:add-int-update-yum-repo (rguile-client "127.0.0.1" 2301) "LoadBalancer")
-(vm:sh:yum-update (rguile-client "127.0.0.1" 2301))
-(vm:sh:yum-install (rguile-client "127.0.0.1" 2301) "ipvsadm"))
-;;(vm:sh:shutdown (rguile-client "127.0.0.1" 2301) #t))
+  'AHOJ
+  (call-with-cfg
+   '((test:vm:mem . 512)
+     (test:vm:net . (user)))
+   (lambda ()
+     (vm:start "base" 1)))
+  (let ((cl (rguile-client "127.0.0.1" 2301)))
+    (vm:configure-net cl 1 '(user))))
+;; (vm:sh:delete-yum-repo (rguile-client "127.0.0.1" 2301) "*")
+;; ;;(vm:sh:chkconfig (rguile-client "127.0.0.1" 2301) "ipvsadm" "off")
+;; (vm:sh:add-int-yum-repo (rguile-client "127.0.0.1" 2301) "Server")
+;; (vm:sh:add-int-yum-repo (rguile-client "127.0.0.1" 2301) "LoadBalancer")
+;; (vm:sh:add-int-update-yum-repo (rguile-client "127.0.0.1" 2301) "Server")
+;; (vm:sh:add-int-update-yum-repo (rguile-client "127.0.0.1" 2301) "LoadBalancer")
+;; (vm:sh:yum-update (rguile-client "127.0.0.1" 2301))
+;; (vm:sh:yum-install (rguile-client "127.0.0.1" 2301) "ipvsadm"))
+;; ;;(vm:sh:shutdown (rguile-client "127.0.0.1" 2301) #t))
 
-;;(display (vm:sh:get-file "/etc/redhat-release"))
-;(set-cfg! 'test:arch "i386")
-;(set-cfg! 'test:version "U5")
-;(set-cfg! 'test:name "rhel-5")
-;(set-cfg! 'test:install-url (string-append (cfg 'ipvsts:http-mirror) "/released/RHEL-5-Server/"
-;                                           (cfg 'test:version) "/" (cfg 'test:arch) "/os"))
-;(set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-" (cfg 'test:name) ".log"))
-;(set-cfg! 'test:distro 'el5)
+;; ;;(display (vm:sh:get-file "/etc/redhat-release"))
+;; ;(set-cfg! 'test:arch "i386")
+;; ;(set-cfg! 'test:version "U5")
+;; ;(set-cfg! 'test:name "rhel-5")
+;; ;(set-cfg! 'test:install-url (string-append (cfg 'ipvsts:http-mirror) "/released/RHEL-5-Server/"
+;; ;                                           (cfg 'test:version) "/" (cfg 'test:arch) "/os"))
+;; ;(set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-" (cfg 'test:name) ".log"))
+;; ;(set-cfg! 'test:distro 'el5)
 
-;;(ipvsts:check
-; (vminstall:download)
-; (vminstall:disk-create)
-; (vminstall:run-install))
