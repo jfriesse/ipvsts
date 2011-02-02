@@ -92,7 +92,10 @@
 
 ;; Run system command on remote guile cl
 (define (vm:sh:run-command cl command)
-  (cl `(system ,command)))
+  (let ((res (cl `(system (string-append ,command " >/tmp/rguile-system-out.txt 2>&1")))))
+    (ipvsts:log "Command \"~A\" (~A):\n~A"
+                command res (vm:sh:get-file cl "/tmp/rguile-system-out.txt"))
+    res))
 
 ;; Take action on service. Action may be start|stop|restart
 (define (vm:sh:service cl service action)
