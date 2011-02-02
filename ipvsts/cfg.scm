@@ -23,18 +23,33 @@
 
 (define-module (ipvsts cfg))
 
-(export cfg set-cfg! set-alist-cfg! set-unsetcfg! set-alist-unsetcfg!
-        get-param-val)
+(use-modules (ipvsts utils))
 
-(define cfg-ht (make-hash-table))
+(export cfg set-cfg! set-alist-cfg! set-unsetcfg! set-alist-unsetcfg!
+        get-param-val call-with-cfg)
+
+(define cfg-ht (list (make-hash-table)))
+
+;; Return top value from hash tables list
+(define (cfg-top)
+  (car cfg-ht))
+
+;; Discards (pop) top value from hash tables list
+(define (cfg-pop)
+  (set! cfg-ht (cdr cfg-ht)))
+
+;; Push newly allocated hash table with content from current top hash table to hash tables
+;; list. This means, that this new table becomes new top
+(define (cfg-push)
+  (set! cfg-ht (append (list (hash-table-clone (cfg-top))) cfg-ht)))
 
 ;; Retreives cfg key value
 (define (cfg var)
-  (hash-ref cfg-ht var))
+  (hash-ref (cfg-top) var))
 
 ;; Set cfg key to val
 (define (set-cfg! var val)
-  (hash-set! cfg-ht var val))
+  (hash-set! (cfg-top) var val))
 
 ;; Stores list of (key . value) pairs
 (define (set-alist-cfg! alist)
@@ -54,6 +69,13 @@
         (#t
          (set-unsetcfg! (caar alist) (cdar alist))
          (set-alist-unsetcfg! (cdr alist)))))
+
+;; Call thunk with newly allocated hash table (but initially with old values) and set new values
+;; from alist (set-alist-cfg!). On end of thunk, newly allocated hash table is discarded
+(define (call-with-cfg alist thunk)
+  (let* ((start (lambda () (cfg-push) (set-alist-cfg! alist)))
+         (stop (lambda () (cfg-pop))))
+    (dynamic-wind start thunk stop)))
 
 ;; Set default values
 (define (set-defaults!)
