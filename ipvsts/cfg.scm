@@ -87,6 +87,7 @@
      (ipvsts:vm-disk-size . "1.5G")
      (ipvsts:vm-passwd . "password")
      (test:arch . "unknown")
+     (test:force-vm-create . #f)
      (test:version . "unknown")
      (test:name . "unknown")
      (test:install-url . "unknown")
