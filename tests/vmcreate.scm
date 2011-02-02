@@ -30,9 +30,10 @@
 
 (export test:vmcreate)
 
-;; Create vm. Force may force creation of vm even if it exists
-(define (test:vmcreate force)
-  (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
+;; Create vm. Uses 'test:force-vm-create to force creation of vm even if it exists
+(define (test:vmcreate)
+  (let* ((force (cfg 'test:force-vm-create))
+         (vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
          (disk-name (cfg 'vminstall:disk:name))
          (image-file (string-append vm-dir "/" disk-name ".img"))
          (is-readable? (access? image-file R_OK)))

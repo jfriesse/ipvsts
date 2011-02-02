@@ -122,7 +122,7 @@
   (define (http-server cl path)
     (ipvsts:log "client want's to download path ~A" path)
     (cond ((equal? path "/ipvsts.ks")
-           (http-serve-string10 cl (vminstall:create-ks (list (cons 'format distro)))))
+           (http-serve-string10 cl (vminstall:create-ks)))
           (#t #f)))
 
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
