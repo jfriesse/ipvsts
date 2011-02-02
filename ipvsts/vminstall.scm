@@ -44,10 +44,10 @@
     (http-get-file (string-append vm-dir "/initrd.img") initrd-path)))
 
 ;; Create base image ipvsts:vm-dir/test:name named base.img with qcow2 format
-(define (vminstall:disk-create . args)
+(define (vminstall:disk-create)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (disk-name (get-param-val 'name 'vminstall:disk:name args))
-         (disk-size (get-param-val 'size 'ipvsts:vm-disk-size args))
+         (disk-name (cfg 'vminstall:disk:name))
+         (disk-size (cfg 'ipvsts:vm-disk-size))
          (system-args (string-append
                        (cfg 'ipvsts:qemu-img) " create -f " (cfg 'vminstall:disk:format)
                        " " vm-dir "/" disk-name ".img" " " disk-size " >/dev/null"))
@@ -55,8 +55,8 @@
     (ipvsts:log "creating image ~A return val ~A" system-args (status:exit-val stat))
     (if (= (status:exit-val stat) 0) #t #f)))
 
-;; Returns kickstart. args may contain format with value el5 or el6
-(define (vminstall:create-ks . args)
+;; Returns kickstart
+(define (vminstall:create-ks)
   (define (append-file port from-file to-file)
     (let ((path (find-file-in-lpath from-file)))
       (if path
@@ -69,7 +69,7 @@
                   (close file))))
           #f)))
 
-  (let ((format (get-param-val 'format 'test:distro args))
+  (let ((format (cfg 'test:distro))
         (os (open-output-string)))
     (simple-format os "install\nurl --url=~A\n" (cfg 'test:install-url))
     (display "text\nlang en_US.UTF-8\nkeyboard us\n" os)
@@ -117,19 +117,17 @@
             (close os)
             res)))))
 
-;; Starts installation. args may contain distro with el5 or el6 value, name with disk name to use,
-;; mem with amount of memory
-(define (vminstall:run-install . args)
+;; Starts installation.
+(define (vminstall:run-install)
   (define (http-server cl path)
     (ipvsts:log "client want's to download path ~A" path)
     (cond ((equal? path "/ipvsts.ks")
-           (let ((distro (get-param-val 'distro 'test:distro args)))
-             (http-serve-string10 cl (vminstall:create-ks (list (cons 'format distro))))))
+           (http-serve-string10 cl (vminstall:create-ks (list (cons 'format distro)))))
           (#t #f)))
 
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (disk-name (get-param-val 'name 'vminstall:disk:name args))
-         (mem (get-param-val 'mem 'vminstall:mem args))
+         (disk-name (cfg 'vminstall:disk:name))
+         (mem (cfg 'vminstall:mem))
          (system-args (list (cfg 'ipvsts:qemu) "-kernel" (string-append vm-dir "/vmlinuz")
                             "-initrd" (string-append vm-dir "/initrd.img")
                             "-hda" (string-append vm-dir "/" disk-name ".img")

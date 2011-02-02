@@ -28,10 +28,10 @@
 
 (export vm:disk:compress vm:disk:create-snapshot)
 
-;; Compress image (name can be in assoc list in 'name key, or test:disk:name)
-(define (vm:disk:compress . args)
+;; Compress image (uses global cfg test:disk:name)
+(define (vm:disk:compress)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (disk-name (get-param-val 'name 'test:disk:name args))
+         (disk-name (cfg 'name 'test:disk:name))
          (tmp-disk-name (string-append vm-dir "/" "tmpimg-XXXXXX"))
          (new-tmp-disk-name
           (let ()
@@ -52,11 +52,11 @@
           (delete-file new-tmp-disk-name)
           #f))))
 
-;; Create snapshot from image (name can be in assoc list in 'name key, or test:disk:name) and
+;; Create snapshot from image (uses global cfg test:disk:name) and
 ;; result image is in new-img
 (define (vm:disk:create-snapshot new-img . args)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (disk-name (get-param-val 'name 'test:disk:name args))
+         (disk-name (cfg 'name 'test:disk:name))
          (system-args (string-append
                        (cfg 'ipvsts:qemu-img) " create -f " (cfg 'vminstall:disk:format) " "
                        "-o" "backing_file=" vm-dir "/" disk-name ".img"

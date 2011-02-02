@@ -32,10 +32,10 @@
 (export vm:start vm:configure-net)
 
 ;; Start virtual machine with name and vm-id
-;; args (assoc list) may contain mem (amount of memory to give to vm) and
-;; net (network configuration). Net is in format ([user | (net . net_id)]*)
+;; Used global cfg is test:vm:mem (amount of memory to give to vm) and
+;; test:vm:net (network configuration). Net is in format ([user | (net . net_id)]*)
 ;; Return #t on success, otherwise #f
-(define (vm:start name vm-id . args)
+(define (vm:start name vm-id)
   (define (get-net-qemu-params vm-id params)
     (define (iter params i res)
       (if (null? params) res
@@ -66,8 +66,8 @@
         (ipvsts:log "qemu serial port ~A is already used"
                     (+ vm-id (cfg 'test:vm:rguile-port-base)))
         #f)
-      (let* ((mem (get-param-val 'mem 'test:vm:mem args))
-             (net (get-param-val 'net 'test:vm:net args))
+      (let* ((mem (cfg 'test:vm:mem))
+             (net (cfg 'test:vm:net))
              (vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
              (net-args (get-net-qemu-params vm-id net))
              (vm-args (append (list (cfg 'ipvsts:qemu)

@@ -26,7 +26,7 @@
 (use-modules (ipvsts utils))
 
 (export cfg set-cfg! set-alist-cfg! set-unsetcfg! set-alist-unsetcfg!
-        get-param-val call-with-cfg)
+        call-with-cfg)
 
 (define cfg-ht (list (make-hash-table)))
 
@@ -60,7 +60,7 @@
 
 ;; Set variable only if it's not already set
 (define (set-unsetcfg! var val)
-  (if (eq? (hash-get-handle cfg-ht var) #f)
+  (if (eq? (hash-get-handle (cfg-top) var) #f)
       (set-cfg! var val)))
 
 ;; Stores list of (key . value) pairs but only if key is not already set
@@ -136,14 +136,6 @@
 (define (load-user-defaults!)
   (if (access? (string-append (getenv "HOME") "/.ipvsts") R_OK)
     (load (string-append (getenv "HOME") "/.ipvsts"))))
-
-;; Return value of parameter. If args is null, or no name-arg is found in
-;; assoc list (car args), name-cfg from cfg is returned. Othervise value from
-;; assoc list.
-(define (get-param-val name-arg name-cfg args)
-  (if (and (not (null? args)) (assoc name-arg (car args)))
-      (cdr (assoc name-arg (car args)))
-      (cfg name-cfg)))
 
 (set-defaults!)
 (load-user-defaults!)
