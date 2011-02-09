@@ -31,7 +31,7 @@
 ;; Compress image (uses global cfg test:disk:name)
 (define (vm:disk:compress)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (disk-name (cfg 'name 'test:disk:name))
+         (disk-name (cfg 'test:disk:name))
          (tmp-disk-name (string-append vm-dir "/" "tmpimg-XXXXXX"))
          (new-tmp-disk-name
           (let ()
