@@ -28,7 +28,7 @@
 
 (export uri-parse net-getip net-getport http-get
         httpd:init httpd:accept http-get-file http-serve-string10
-        wait-for-tcp-port)
+        wait-for-tcp-port wait-for-tcp-port-close)
 
 ;; Parse uri (protocol://host:port/root_path) string to list in form
 ;; (protocol host port root_path) or #f if uri is invalid. port may be
@@ -189,4 +189,29 @@
                   (sleep 1))
                 (if (< (- (current-time) t) max-time) #t #f)))))
     (close s)
+    wait-res))
+
+;; Wait for tcp port on host to become closed (ie. it's no longer possible to connect to it).
+;; Wait for max-time time. max-time zero means only probe
+;; Return value is #t if port become closed within timeout otherwise #f
+(define (wait-for-tcp-port-close host port max-time)
+  (define (probe)
+    (catch #t
+      (lambda ()
+        (let ((s (socket PF_INET SOCK_STREAM 0)))
+          (connect s AF_INET (inet-pton AF_INET host) port)
+          (close s)
+          #t))
+      (lambda (key . args)
+        #f)))
+
+  (let* ((t (current-time))
+         (wait-res
+          (if (<= max-time 0)
+              (not (probe))
+              (let ()
+                (while (and (< (- (current-time) t) max-time)
+                            (probe))
+                  (sleep 1))
+                (if (< (- (current-time) t) max-time) #t #f)))))
     wait-res))
