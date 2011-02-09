@@ -129,6 +129,7 @@
   (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-default.log"))
   (set-cfg! 'test:disk:name (cfg 'vminstall:disk:name))
   (set-cfg! 'test:vm:max-boot-time (* 5 60))
+  (set-cfg! 'test:vm:max-shutdown-time (* 2 60))
   (set-cfg! 'test:vm:sh:udev-net-str
             (string-append "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\""
                            "~A\", ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\", KERNEL==\"eth*\", "

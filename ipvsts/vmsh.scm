@@ -25,6 +25,8 @@
 
 (use-modules (ipvsts cfg))
 (use-modules (ipvsts logging))
+(use-modules (ipvsts netfuncs))
+(use-modules (rguile client))
 
 (export vm:sh:add-int-update-yum-repo vm:sh:add-int-yum-repo vm:sh:add-yum-repo
         vm:sh:chkconfig vm:sh:create-file vm:sh:delete-yum-repo vm:sh:get-file
@@ -112,17 +114,24 @@
     (= res 0)))
 
 ;; Poweroff vm. If clean is set, clean shutdown is proceed, otherwise
-;; unclean (-nf) shutdown is proceeed.
-(define (vm:sh:shutdown cl clean)
+;; unclean (-nf) shutdown is proceeed. If wait-for-end parameter is set,
+;; function waits for shutdown but maximum for test:vm:max-shutdown-time
+;; host is host where vm is running on given serial line port
+(define (vm:sh:shutdown host port clean wait-for-end)
   (ipvsts:log "Shutting down machine")
   (let ((res
          (vm:sh:run-command
-          cl
+          (rguile-client host port)
           (string-append (cfg 'test:vm:sh:cmd:poweroff)
                          " "
                          (if (not clean) "-nf" "")))))
     (cond ((eof-object? res) #t)
-          ((= res 0) #t)
+          ((= res 0)
+           (if wait-for-end
+               (let ()
+                 (ipvsts:log "Waiting for serial port disconnect")
+                 (wait-for-tcp-port-close host port (cfg 'test:vm:max-shutdown-time)))
+               #t))
           (#t #f))))
 
 ;; Install package(s)
