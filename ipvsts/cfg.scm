@@ -87,6 +87,8 @@
      (ipvsts:vm-disk-size . "1.5G")
      (ipvsts:vm-passwd . "password")
      (test:arch . "unknown")
+     (test:chkconfig:off . ("ipvsadm" "iptables" "ip6tables"))
+     (test:chkconfig:on . ("ipvsadm"))
      (test:force-vm-create . #f)
      (test:version . "unknown")
      (test:name . "unknown")
@@ -115,7 +117,11 @@
      (test:vm:sh:network-scripts-rm . "ifcfg-eth*")
      (test:vm:sh:yum-repos-dir . "/etc/yum.repos.d")
      (test:vm:sh:udev-net-file . "/etc/udev/rules.d/70-persistent-net.rules")
+     (test:yum:int-repos . ("Server" "LoadBalancer"))
+     (test:yum:packages-to-install . "ipvsadm")
+     (test:rpm:packages-to-install . #f)
      (test:distro . 'el6)
+     (test:vm:compress-base-image . #f)
      (vminstall:disk:format . "qcow2")
      (vminstall:disk:name . "base")
      (vminstall:http-path:vmlinuz . "images/pxeboot/vmlinuz")
@@ -134,6 +140,7 @@
             (string-append "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\""
                            "~A\", ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\", KERNEL==\"eth*\", "
                            "NAME=\"~A\""))
+  (set-cfg! 'test:yum:update-int-repos (cfg 'test:yum:int-repos))
   (set-cfg! 'vminstall:max-install-time (* 60 60)))
 
 ;; Load user defaults from ~/.ipvsts if such file exists
