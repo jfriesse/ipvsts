@@ -28,8 +28,8 @@
 
 (export vm:sh:add-int-update-yum-repo vm:sh:add-int-yum-repo vm:sh:add-yum-repo
         vm:sh:chkconfig vm:sh:create-file vm:sh:delete-yum-repo vm:sh:get-file
-        vm:sh:run-command vm:sh:service vm:sh:shutdown vm:sh:yum-install
-        vm:sh:yum-update)
+        vm:sh:rpm-install vm:sh:run-command vm:sh:service vm:sh:shutdown
+        vm:sh:yum-install vm:sh:yum-update)
 
 ;; Add internal yum repo. Base url path is taken from 'test:update-url
 (define (vm:sh:add-int-update-yum-repo cl repo)
@@ -89,6 +89,13 @@
             (close s)
             res))
         #f)))
+
+;; Install RPM package(s)
+(define (vm:sh:rpm-install cl packages)
+  (let* ((cmd (string-append (cfg 'test:vm:sh:cmd:rpm) " --oldpackage --replacepkgs -U " packages))
+         (res (vm:sh:run-command cl cmd)))
+    (ipvsts:log "Installing packages ~A (~A) result ~A" packages cmd res)
+    (= res 0)))
 
 ;; Run system command on remote guile cl
 (define (vm:sh:run-command cl command)
