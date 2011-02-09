@@ -54,9 +54,9 @@
 
 ;; Create snapshot from image (uses global cfg test:disk:name) and
 ;; result image is in new-img
-(define (vm:disk:create-snapshot new-img . args)
+(define (vm:disk:create-snapshot new-img)
   (let* ((vm-dir (string-append (cfg 'ipvsts:vm-dir) "/" (cfg 'test:name)))
-         (disk-name (cfg 'name 'test:disk:name))
+         (disk-name (cfg 'test:disk:name))
          (system-args (string-append
                        (cfg 'ipvsts:qemu-img) " create -f " (cfg 'vminstall:disk:format) " "
                        "-o" "backing_file=" vm-dir "/" disk-name ".img"
