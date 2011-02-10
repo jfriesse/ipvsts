@@ -30,7 +30,7 @@
 
 (export vm:sh:add-int-update-yum-repo vm:sh:add-int-yum-repo vm:sh:add-yum-repo
         vm:sh:chkconfig vm:sh:create-file vm:sh:delete-yum-repo vm:sh:get-file
-        vm:sh:rpm-install vm:sh:run-command vm:sh:service vm:sh:shutdown
+        vm:sh:reboot vm:sh:rpm-install vm:sh:run-command vm:sh:service vm:sh:shutdown
         vm:sh:yum-install vm:sh:yum-update)
 
 ;; Add internal yum repo. Base url path is taken from 'test:update-url
@@ -91,6 +91,39 @@
             (close s)
             res))
         #f)))
+
+;; Reboot vm. If clean is set, clean shutdown is proceed, otherwise
+;; unclean (-nf) shutdown is proceeed. If wait-for-boot parameter is set,
+;; function waits for boot but maximum for test:vm:max-boot-time
+;; host is host where vm is running on given serial line port
+(define (vm:sh:reboot host port clean wait-for-boot)
+  (ipvsts:log "Rebooting machine")
+  (let ((res
+         (vm:sh:run-command
+          (rguile-client host port)
+          (string-append "(sleep 1; "
+                         (cfg 'test:vm:sh:cmd:service) " " "ipvsts-rguile" " stop;"
+                         (cfg 'test:vm:sh:cmd:reboot)
+                         " "
+                         (if (not clean) "-nf" "")
+                         ") &"))))
+    (cond ((= res 0)
+           (sleep 3)
+           (if wait-for-boot
+               (let ()
+                 (ipvsts:log "Waiting for boot up")
+                 (if (rguile-client-wait-for-operational-state
+                      host
+                      port
+                      (cfg 'test:vm:max-boot-time))
+                     (let ()
+                       #t)
+                     (let ()
+                       (ipvsts:log "wait for operational client exceed time limit ~A"
+                                   (cfg 'test:vm:max-boot-time))
+                       #f)))
+               #t))
+          (#t #f))))
 
 ;; Install RPM package(s)
 (define (vm:sh:rpm-install cl packages)
