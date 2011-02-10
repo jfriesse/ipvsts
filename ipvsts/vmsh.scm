@@ -31,7 +31,8 @@
 (export vm:sh:add-int-update-yum-repo vm:sh:add-int-yum-repo vm:sh:add-yum-repo
         vm:sh:chkconfig vm:sh:create-file vm:sh:delete-yum-repo vm:sh:get-file
         vm:sh:is-module-loaded? vm:sh:reboot vm:sh:rpm-install vm:sh:run-command
-        vm:sh:service vm:sh:shutdown vm:sh:yum-install vm:sh:yum-update)
+        vm:sh:run-command-out vm:sh:service vm:sh:shutdown vm:sh:yum-install
+        vm:sh:yum-update)
 
 ;; Add internal yum repo. Base url path is taken from 'test:update-url
 (define (vm:sh:add-int-update-yum-repo cl repo)
@@ -145,6 +146,14 @@
     (ipvsts:log "Command \"~A\" (~A):\n~A"
                 command res (vm:sh:get-file cl "/tmp/rguile-system-out.txt"))
     res))
+
+;; Run system command on remote guile cl. Return is cons of error code and output
+(define (vm:sh:run-command-out cl command)
+  (let ((res (cl `(system (string-append ,command " >/tmp/rguile-system-out.txt 2>&1"))))
+        (output (vm:sh:get-file cl "/tmp/rguile-system-out.txt")))
+    (ipvsts:log "Command \"~A\" (~A):\n~A"
+                command res output)
+    (cons res output)))
 
 ;; Take action on service. Action may be start|stop|restart
 (define (vm:sh:service cl service action)
