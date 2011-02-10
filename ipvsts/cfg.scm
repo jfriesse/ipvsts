@@ -87,7 +87,7 @@
      (ipvsts:vm-disk-size . "1.5G")
      (ipvsts:vm-passwd . "password")
      (test:arch . "unknown")
-     (test:chkconfig:off . ("ipvsadm" "iptables" "ip6tables" "arptables_jf"))
+     (test:chkconfig:off . ("ipvsadm" "iptables" "ip6tables" "arptables_jf" "network"))
      (test:chkconfig:on . #f)
      (test:force-vm-create . #f)
      (test:version . "unknown")
