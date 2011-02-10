@@ -30,8 +30,8 @@
 
 (export vm:sh:add-int-update-yum-repo vm:sh:add-int-yum-repo vm:sh:add-yum-repo
         vm:sh:chkconfig vm:sh:create-file vm:sh:delete-yum-repo vm:sh:get-file
-        vm:sh:reboot vm:sh:rpm-install vm:sh:run-command vm:sh:service vm:sh:shutdown
-        vm:sh:yum-install vm:sh:yum-update)
+        vm:sh:is-module-loaded? vm:sh:reboot vm:sh:rpm-install vm:sh:run-command
+        vm:sh:service vm:sh:shutdown vm:sh:yum-install vm:sh:yum-update)
 
 ;; Add internal yum repo. Base url path is taken from 'test:update-url
 (define (vm:sh:add-int-update-yum-repo cl repo)
@@ -75,6 +75,13 @@
                                         (cfg 'test:vm:sh:yum-repos-dir)
                                         "/" repo ".repo"))
    0))
+
+;; Return #t if module is loaded, otherwise #f
+(define (vm:sh:is-module-loaded? cl module)
+  (let* ((cmd (string-append (cfg 'test:vm:sh:cmd:grep) " " module " " (cfg 'test:vm:sh:file:proc-modules)))
+         (res (vm:sh:run-command cl cmd)))
+    (ipvsts:log "Module ~A loaded = ~A" module (= res 0))
+    (= res 0)))
 
 ;; Retreive file remote guile cl
 ;; Return #f if file is not found otherwise string with file content
