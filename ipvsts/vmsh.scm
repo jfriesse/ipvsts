@@ -142,9 +142,11 @@
 
 ;; Run system command on remote guile cl
 (define (vm:sh:run-command cl command)
-  (let ((res (cl `(system (string-append ,command " >/tmp/rguile-system-out.txt 2>&1")))))
+  (let* ((out-file "/tmp/rguile-system-out.txt")
+         (cf-res (vm:sh:create-file cl "" out-file))
+         (res (cl `(system (string-append ,command " >" ,out-file " 2>&1")))))
     (ipvsts:log "Command \"~A\" (~A):\n~A"
-                command res (vm:sh:get-file cl "/tmp/rguile-system-out.txt"))
+                command res (vm:sh:get-file cl out-file))
     res))
 
 ;; Run system command on remote guile cl. Return is cons of error code and output
