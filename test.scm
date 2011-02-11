@@ -38,6 +38,7 @@
 
 (use-modules (tests vmcreate))
 (use-modules (tests vmprepare))
+(use-modules (tests ipvslocal))
 
 (set-cfg! 'test:arch "i386")
 (set-cfg! 'test:version "6.0")
@@ -49,9 +50,30 @@
                                           "/" (cfg 'test:arch) "/os"))
 (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-" (cfg 'test:name) ".log"))
 
-(ipvsts:check 'test
-              (test:vmcreate)
-              (test:vm-prepare-base-image))
+;;(ipvsts:check 'test
+;;              (test:vmcreate)
+;;              (test:vm-prepare-base-image))
+
+(define (test:ipvslocal)
+  (let* ((vm-id 1)
+         (vm-disk-name "lvs1")
+         (vm-net '((net . 1) (net . 2)))
+         (cl (rguile-client "127.0.0.1" (+ (cfg 'test:vm:rguile-port-base) vm-id))))
+
+    (define (vm-start)
+      (call-with-cfg
+       (list (cons 'test:vm:net vm-net))
+       (lambda ()
+         (vm:start vm-disk-name vm-id))))
+
+  (ipvsts:check 'ipvslocal
+                (vm:disk:create-snapshot vm-disk-name)
+                (vm-start)
+                (vm:configure-net cl vm-id vm-net)
+                (test:ipvslocal:dont-load-module-on-status cl)
+                (test:ipvslocal:man-page-test cl))))
+
+(test:ipvslocal)
 
 ;; (set-cfg! 'test:arch "i386")
 ;; (set-cfg! 'test:version "U5")

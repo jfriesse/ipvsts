@@ -23,6 +23,8 @@
 
 (define-module (tests ipvslocal))
 
+(use-modules (ice-9 regex))
+
 (use-modules (ipvsts cfg))
 (use-modules (ipvsts logging))
 (use-modules (ipvsts tunit))
@@ -33,7 +35,8 @@
 
 (use-modules (rguile client))
 
-(export test:ipvslocal:module-loaded test:ipvslocal:dont-load-module-on-status)
+(export test:ipvslocal:module-loaded test:ipvslocal:dont-load-module-on-status
+        test:ipvslocal:man-page-test)
 
 ;; Test if ip_vs module is loaded
 (define (test:ipvslocal:module-loaded cl)
@@ -46,3 +49,57 @@
                 (not (vm:sh:service cl (cfg 'test:vm:sh:service:ipvsadm) "start"))
                 (not (vm:sh:service cl (cfg 'test:vm:sh:service:ipvsadm) "status"))
                 (not (test:ipvslocal:module-loaded cl))))
+
+;; Test that man page of ipvsadm exists and also that all options returned by
+;; --help are documented. There is one exception (--ipv6) which is not documented
+;; at all (but short version -6 is).
+(define (test:ipvslocal:man-page-test cl)
+  (define (gen-man-page)
+    (let ((res
+           (vm:sh:run-command
+            cl
+            (string-append (cfg 'test:vm:sh:cmd:man) " " (cfg 'test:vm:sh:manpage:ipvsadm)
+                           " | " (cfg 'test:vm:sh:cmd:col) " -b | "
+                           (cfg 'test:vm:sh:cmd:tee) " /tmp/manpage.txt"
+                           "; [ $PIPESTATUS -eq 0 ] || false"))))
+      (= res 0)))
+
+  (define (is-opt-in-mp? opt)
+    (let ((res
+           (vm:sh:run-command
+            cl
+            (string-append (cfg 'test:vm:sh:cmd:grep) " -q -- " opt " /tmp/manpage.txt"))))
+      (= res 0)))
+
+  (define (line-iter file)
+    (cond ((null? file) #t)
+          (#t
+           (let* ((line (string-trim-both (car file)))
+                  (match (string-match "^(--[^ ]+)[^-]*(-[^ ])* +" line)))
+             (cond ((= (string-length line) 0)
+                    (line-iter (cdr file)))
+                   ((not match) #f)
+                   ((not (= (match:count match) 3)) #f)
+                   (#t
+                    (let ((long-opt (match:substring match 1))
+                          (short-opt (match:substring match 2)))
+                      (cond ((equal? long-opt "--ipv6")
+                             (line-iter (cdr file)))
+                            ((and long-opt short-opt)
+                             (if (and (is-opt-in-mp? long-opt) (is-opt-in-mp? short-opt))
+                                 (line-iter (cdr file))
+                                 #f))
+                            (#t
+                             (if (is-opt-in-mp? long-opt)
+                                 (line-iter (cdr file))
+                                 #f))))))))))
+
+  (let ((res
+         (vm:sh:run-command-out
+          cl
+          (string-append (cfg 'test:vm:sh:cmd:ipvsadm) " --help | "
+                         (cfg 'test:vm:sh:cmd:grep) " '^ *--'")))
+        (res-mp (gen-man-page)))
+    (cond ((and (= (car res) 0) res-mp)
+           (line-iter (string-split (cdr res) #\nl)))
+          (#t #f))))
