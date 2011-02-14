@@ -25,7 +25,8 @@
 (use-modules (ice-9 rw))
 
 (export port-cat mkdir-safe find-file-in-path find-file-in-lpath
-        byte->hexstr hash-table->list list->hash-table hash-table-clone)
+        byte->hexstr hash-table->list list->hash-table hash-table-clone
+        string-list->string)
 
 ;; Copy content of source-port to destination port dest-port
 ;; source and dest ports can be any type of port, but if both of them are file ports,
@@ -99,3 +100,13 @@
 ;; Clone hash table
 (define (hash-table-clone ht)
   (list->hash-table (hash-table->list ht)))
+
+;; Convert list of strings ("test" "test2") to string inserting
+;; sep string inside two items (sep = " " -> "test test2")
+(define (string-list->string l sep)
+  (define (iter l res)
+    (cond ((null? l) res)
+          ((= (string-length res) 0) (iter (cdr l) (car l)))
+          (#t
+           (iter (cdr l) (string-append res sep (car l))))))
+  (iter l ""))
