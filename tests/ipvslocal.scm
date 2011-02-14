@@ -35,8 +35,9 @@
 
 (use-modules (rguile client))
 
-(export test:ipvslocal:auto-load-module test:ipvslocal:module-loaded
-        test:ipvslocal:dont-load-module-on-status test:ipvslocal:man-page-test)
+(export test:ipvslocal:auto-load-module test:ipvslocal:auto-unload-module
+        test:ipvslocal:module-loaded test:ipvslocal:dont-load-module-on-status
+        test:ipvslocal:man-page-test)
 
 ;; Test that ip_vs module is automatically loaded on first run of ipvsadm
 ;; (not thru service init script)
@@ -48,6 +49,12 @@
     (ipvsts:check 'auto-load-module
                   (= res 0)
                   (test:ipvslocal:module-loaded cl))))
+
+;; Test that init script correctly unloads module on stop of service
+(define (test:ipvslocal:auto-unload-module cl)
+  (ipvsts:check 'auto-unload-module
+                (vm:sh:service cl (cfg 'test:vm:sh:service:ipvsadm) "stop")
+                (not (test:ipvslocal:module-loaded cl))))
 
 ;; Test if ip_vs module is loaded
 (define (test:ipvslocal:module-loaded cl)
