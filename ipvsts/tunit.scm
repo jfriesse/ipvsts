@@ -47,10 +47,12 @@
 ;; Takes body, which is multiple expressions and call "and" function
 ;; on every ipvsts:report-result with expr 'expr parameters.
 (define-macro (ipvsts:check test . body)
-  `(let ()
-     (ipvsts:check-list-add ,test)
-     (let ((result
-            (and
-             ,@(map (lambda (x) `(ipvsts:report-result ,x ',x)) body))))
-       (ipvsts:check-list-pop)
-       result)))
+  `(dynamic-wind
+     (lambda () (ipvsts:check-list-add ,test))
+     (lambda ()
+       (let ()
+         (let ((result
+                (and
+                 ,@(map (lambda (x) `(ipvsts:report-result ,x ',x)) body))))
+           result)))
+     (lambda () (ipvsts:check-list-pop))))
