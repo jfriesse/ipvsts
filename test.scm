@@ -54,10 +54,30 @@
 ;;              (test:vmcreate)
 ;;              (test:vm-prepare-base-image))
 
+(define (test:ipvslocal:add-service cl net-id vm-id)
+  (define (run-ipvsadm . params)
+    (let ((res
+           (vm:sh:run-command
+            cl
+            (string-append (cfg 'test:vm:sh:cmd:ipvsadm) " "
+                           (string-list->string params " ")))))
+      (= res 0)))
+
+  (let ((ip4 (simple-format #f (cfg 'test:vm:ip:addr) net-id vm-id))
+        (port "80"))
+    (ipvsts:check 'add-service
+                  (not (run-ipvsadm "-A"))
+                  (not (run-ipvsadm "-A" ip4))
+                  (not (run-ipvsadm "-A" "-t"))
+                  (run-ipvsadm "-A" "-t" (string-append ip4 ":" port))
+                  (not (run-ipvsadm "-A" "-u"))
+                  (run-ipvsadm "-A" "-u" (string-append ip4 ":" port)))))
+
 (define (test:ipvslocal)
   (let* ((vm-id 1)
+         (net-id 1)
          (vm-disk-name "lvs1")
-         (vm-net '((net . 1) (net . 2)))
+         (vm-net (list 'user (cons 'net net-id)))
          (cl (rguile-client "127.0.0.1" (+ (cfg 'test:vm:rguile-port-base) vm-id))))
 
     (define (vm-start)
@@ -71,6 +91,8 @@
                 (vm-start)
                 (vm:configure-net cl vm-id vm-net)
                 (test:ipvslocal:dont-load-module-on-status cl)
+                (test:ipvslocal:auto-load-module cl)
+                (test:ipvslocal:auto-unload-module cl)
                 (test:ipvslocal:man-page-test cl))))
 
 (test:ipvslocal)
