@@ -137,13 +137,19 @@
       (cond ((equal? net 'user)
              (string-append prefix-str "BOOTPROTO=\"dhcp\"\n"))
           (#t
-           (simple-format #f "~AIPADDR=\"~A\"\nNETMASK=\"~A\"\n"
+           (simple-format #f
+                          "~AIPADDR=\"~A\"\nNETMASK=\"~A\"\nIPV6INIT=\"yes\"\nIPV6ADDR=\"~A/~A\"\n"
                           prefix-str
                           (simple-format #f
                                          (cfg 'test:vm:ip:addr)
                                          (cdr net)
                                          vm-id)
-                          (cfg 'test:vm:ip:mask))))))
+                          (cfg 'test:vm:ip:mask)
+                          (simple-format #f
+                                         (cfg 'test:vm:ip6:addr)
+                                         (cdr net)
+                                         vm-id)
+                          (cfg 'test:vm:ip6:prefix))))))
 
   (define (store-ifcfg-files)
     (define (iter i net)

@@ -101,6 +101,8 @@
      (test:vm:vnc-base . 10)
      (test:vm:ip:addr . "192.168.~A.~A")
      (test:vm:ip:mask . "255.255.255.0")
+     (test:vm:ip6:addr . "fec0:1111:2222:3333:4444:5555:~A:~A")
+     (test:vm:ip6:prefix . "112")
      (test:vm:macaddr . "52:54:00:00:~A:~A")
      (test:vm:mcast-addr . "239.255.0.1")
      (test:vm:mcast-port-base . 4096)
