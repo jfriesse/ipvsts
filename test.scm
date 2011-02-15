@@ -54,7 +54,7 @@
 ;;              (test:vmcreate)
 ;;              (test:vm-prepare-base-image))
 
-(define (test:ipvslocal:add-service cl net-id vm-id)
+(define (test:ipvslocal:bad-params cl net-id vm-id)
   (define (run-ipvsadm . params)
     (let ((res
            (vm:sh:run-command
@@ -63,15 +63,118 @@
                            (string-list->string params " ")))))
       (= res 0)))
 
-  (let ((ip4 (simple-format #f (cfg 'test:vm:ip:addr) net-id vm-id))
-        (port "80"))
+  (define (add-service ip4 ip6 port port2 fw-mark)
     (ipvsts:check 'add-service
                   (not (run-ipvsadm "-A"))
                   (not (run-ipvsadm "-A" ip4))
+                  (not (run-ipvsadm "-A" (string-append ip4 ":" port)))
                   (not (run-ipvsadm "-A" "-t"))
+                  (not (run-ipvsadm "-A" "-t" (string-append ip4 ":" port) "-O"))
                   (run-ipvsadm "-A" "-t" (string-append ip4 ":" port))
+                  (not (run-ipvsadm "-A" "-t" (string-append ip4 ":" port)))
+                  (run-ipvsadm "-A" "-t" (string-append "[" ip6 "]:" port))
+                  (not (run-ipvsadm "-A" "-t" (string-append "[" ip6 "]:" port)))
                   (not (run-ipvsadm "-A" "-u"))
-                  (run-ipvsadm "-A" "-u" (string-append ip4 ":" port)))))
+                  (run-ipvsadm "-A" "-u" (string-append ip4 ":" port))
+                  (not (run-ipvsadm "-A" "-u" (string-append ip4 ":" port)))
+                  (run-ipvsadm "-A" "-u" (string-append "[" ip6 "]:" port))
+                  (not (run-ipvsadm "-A" "-u" (string-append "[" ip6 "]:" port)))
+                  (not (run-ipvsadm "-A" "-f"))
+                  (run-ipvsadm "-A" "-f" fw-mark)
+                  (not (run-ipvsadm "-A" "-f" fw-mark))
+                  (not (run-ipvsadm "-A" (string-append ip4 ":" port)))))
+
+  (define (edit-service ip4 ip6 port port2 fw-mark)
+    (ipvsts:check 'edit-service
+                  (not (run-ipvsadm "-E"))
+                  (run-ipvsadm "-E" "-t" (string-append ip4 ":" port))
+                  (run-ipvsadm "-E" "-t" (string-append ip4 ":" port) "-s" "rr")
+                  (not (run-ipvsadm "-E" "-t" (string-append ip4 ":" port2) "-s" "rr"))
+                  (run-ipvsadm "-E" "-t" (string-append "[" ip6 "]:" port) "-s" "rr")
+                  (not (run-ipvsadm "-E" "-t" (string-append "[" ip6 "]:" port2) "-s" "rr"))
+                  (run-ipvsadm "-E" "-u" (string-append ip4 ":" port))
+                  (run-ipvsadm "-E" "-u" (string-append ip4 ":" port) "-s" "rr")
+                  (not (run-ipvsadm "-E" "-u" (string-append ip4 ":" port2) "-s" "rr"))
+                  (run-ipvsadm "-E" "-u" (string-append "[" ip6 "]:" port) "-s" "rr")
+                  (not (run-ipvsadm "-E" "-u" (string-append "[" ip6 "]:" port2) "-s" "rr"))
+                  (run-ipvsadm "-E" "-f" fw-mark)
+                  (run-ipvsadm "-E" "-f" fw-mark "-s" "rr")))
+
+  (define (del-service ip4 ip6 port port2 fw-mark)
+    (ipvsts:check 'del-service
+                  (not (run-ipvsadm "-D"))
+                  (not (run-ipvsadm "-D" "-t"))
+                  (run-ipvsadm "-D" "-t" (string-append ip4 ":" port))
+                  (not (run-ipvsadm "-D" "-t" (string-append ip4 ":" port)))
+                  (not (run-ipvsadm "-D" "-t" (string-append ip4 ":" port2)))
+                  (run-ipvsadm "-D" "-t" (string-append "[" ip6 "]:" port))
+                  (not (run-ipvsadm "-D" "-t" (string-append "[" ip6 "]:" port)))
+                  (run-ipvsadm "-D" "-u" (string-append ip4 ":" port))
+                  (not (run-ipvsadm "-D" "-u" (string-append ip4 ":" port)))
+                  (not (run-ipvsadm "-D" "-u" (string-append ip4 ":" port2)))
+                  (run-ipvsadm "-D" "-u" (string-append "[" ip6 "]:" port))
+                  (not (run-ipvsadm "-D" "-u" (string-append "[" ip6 "]:" port)))
+                  (run-ipvsadm "-D" "-f" fw-mark)))
+
+  (define (add-route ip4 ip6 port port2 fw-mark)
+    (ipvsts:check 'add-route
+                  (not (run-ipvsadm "-a"))
+                  (not (run-ipvsadm "-a" "-t"))
+                  (not (run-ipvsadm "-a" "-t" (string-append ip4 ":" port)))
+                  (not (run-ipvsadm "-a" "-t" (string-append ip4 ":" port) "-r"))
+                  (run-ipvsadm "-a" "-t" (string-append ip4 ":" port) "-r"
+                       (string-append ip4 ":" port))
+                  (not (run-ipvsadm "-a" "-t" (string-append ip4 ":" port) "-r"
+                       (string-append ip4 ":" port)))
+                  (run-ipvsadm "-a" "-t" (string-append "[" ip6 "]:" port) "-r"
+                       (string-append "[" ip6 "]:" port))
+                  (not (run-ipvsadm "-a" "-t" (string-append "[" ip6 "]:" port) "-r"
+                       (string-append "[" ip6 "]:" port)))
+                  (not (run-ipvsadm "-a" "-u" (string-append ip4 ":" port) "-r"
+                       (string-append ip4 ":" port) "-w"))
+                  (not (run-ipvsadm "-a" "-u" (string-append ip4 ":" port) "-r"
+                       (string-append ip4 ":" port) "-w" "test"))
+                  (not (run-ipvsadm "-a" "-u" (string-append ip4 ":" port) "-r"
+                       (string-append ip4 ":" port) "-x"))
+                  (not (run-ipvsadm "-a" "-u" (string-append ip4 ":" port) "-r"
+                       (string-append ip4 ":" port) "-x" "test"))
+                  (not (run-ipvsadm "-a" "-u" (string-append ip4 ":" port) "-r"
+                       (string-append ip4 ":" port) "-y"))
+                  (not (run-ipvsadm "-a" "-u" (string-append ip4 ":" port) "-r"
+                       (string-append ip4 ":" port) "-y" "test"))))
+
+  (define (del-route ip4 ip6 port port2 fw-mark)
+    (ipvsts:check 'del-route
+                  (not (run-ipvsadm "-d"))
+                  (not (run-ipvsadm "-d" "-t"))
+                  (not (run-ipvsadm "-d" "-t" (string-append ip4 ":" port)))
+                  (not (run-ipvsadm "-d" "-t" (string-append ip4 ":" port) "-r"))
+                  (run-ipvsadm "-d" "-t" (string-append ip4 ":" port) "-r"
+                       (string-append ip4 ":" port))
+                  (not (run-ipvsadm "-d" "-t" (string-append ip4 ":" port) "-r"
+                       (string-append ip4 ":" port)))
+                  (run-ipvsadm "-d" "-t" (string-append "[" ip6 "]:" port) "-r"
+                       (string-append "[" ip6 "]:" port))
+                  (not (run-ipvsadm "-d" "-t" (string-append "[" ip6 "]:" port) "-r"
+                       (string-append "[" ip6 "]:" port)))
+                  (not (run-ipvsadm "-d" "-u" (string-append ip4 ":" port) "-r"
+                       (string-append ip4 ":" port) "-w"))))
+
+  (let ((ip4 (simple-format #f (cfg 'test:vm:ip:addr) net-id vm-id))
+        (ip6 "fec1::1")
+        (port "80")
+        (port2 "81")
+        (fw-mark "1"))
+    (ipvsts:check 'bad-params
+                  (add-service ip4 ip6 port port2 fw-mark)
+                  (edit-service ip4 ip6 port port2 fw-mark)
+                  (del-service ip4 ip6 port port2 fw-mark)
+                  (add-service ip4 ip6 port port2 fw-mark)
+                  (add-route ip4 ip6 port port2 fw-mark)
+                  (del-route ip4 ip6 port port2 fw-mark)
+                  (run-ipvsadm "-C"))))
+
+(test:ipvslocal:bad-params (rguile-client "127.0.0.1" 2301) 1 1)
 
 (define (test:ipvslocal)
   (let* ((vm-id 1)
@@ -93,7 +196,8 @@
                 (test:ipvslocal:dont-load-module-on-status cl)
                 (test:ipvslocal:auto-load-module cl)
                 (test:ipvslocal:auto-unload-module cl)
-                (test:ipvslocal:man-page-test cl))))
+                (test:ipvslocal:man-page-test cl)
+                (test:ipvslocal:bad-params cl net-id vm-id))))
 
 (test:ipvslocal)
 
