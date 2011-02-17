@@ -79,7 +79,8 @@
 
 ;; Return #t if module is loaded, otherwise #f
 (define (vm:sh:is-module-loaded? cl module)
-  (let* ((cmd (string-append (cfg 'test:vm:sh:cmd:grep) " " module " " (cfg 'test:vm:sh:file:proc-modules)))
+  (let* ((cmd (string-append (cfg 'test:vm:sh:cmd:grep) " " module " "
+                             (cfg 'test:vm:sh:file:proc-modules)))
          (res (vm:sh:run-command cl cmd)))
     (ipvsts:log "Module ~A loaded = ~A" module (= res 0))
     (= res 0)))
