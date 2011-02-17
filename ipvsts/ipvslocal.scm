@@ -74,7 +74,7 @@
            (let* ((service-match (return-service-matcher (car file)))
                   (proto (parse-proto (match:substring service-match 1)))
                   (addr (match:substring service-match 2))
-                  (port (if (eq? proto 'FWM) 0 (match:substring service-match 3)))
+                  (port (if (eq? proto 'FWM) "0" (match:substring service-match 3)))
                   (scheduler (if (eq? proto 'FWM)
                                  (match:substring service-match 3)
                                  (match:substring service-match 4)))
