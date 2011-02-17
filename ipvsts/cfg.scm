@@ -127,6 +127,7 @@
      (test:vm:sh:service:ipvsadm . "ipvsadm")
      (test:vm:sh:module-name:ipvs . "ip_vs")
      (test:vm:sh:file:proc-modules . "/proc/modules")
+     (test:vm:sh:file:proc-ip_vs . "/proc/net/ip_vs")
      (test:vm:sh:yum-repos-dir . "/etc/yum.repos.d")
      (test:vm:sh:udev-net-file . "/etc/udev/rules.d/70-persistent-net.rules")
      (test:yum:int-repos . ("Server" "LoadBalancer"))
