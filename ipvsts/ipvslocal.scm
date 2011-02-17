@@ -76,7 +76,10 @@
           (#t #f)))
 
   (define (return-service-matcher addr-str)
-    (let ((tu6-m (string-match "^([TU][^ ]+) +\\[([0-9A-Fa-f:]+)]:([0-9A-Fa-f]+) +([^ ]+)" addr-str))
+    (let ((tu6-m
+           (string-match
+            "^([TU][^ ]+) +\\[([0-9A-Fa-f:]+)]:([0-9A-Fa-f]+) +([^ ]+)"
+            addr-str))
           (tu4-m (string-match "^([TU][^ ]+) +([0-9A-Fa-f]+):([0-9A-Fa-f]+) +([^ ]+)" addr-str))
           (fw-m (string-match "^([F][^ ]+) +([0-9A-Fa-f]+) +([^ ]+)" addr-str)))
       (cond (tu6-m tu6-m)
