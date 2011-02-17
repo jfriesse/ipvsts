@@ -29,7 +29,39 @@
 (use-modules (ipvsts logging))
 (use-modules (ipvsts vmsh))
 
-(export ipvslocal:parse:net-ip_vs)
+(export ipvslocal:rules-sort ipvslocal:parse:net-ip_vs)
+
+;; Sort parsed rules
+(define (ipvslocal:rules-sort rules)
+  (define (route-sort rules res)
+    (cond ((null? rules) res)
+          ((null? (caddr (cdddar rules)))
+           (route-sort (cdr rules) (append res (list (car rules)))))
+          (#t
+           (route-sort (cdr rules)
+                       (append
+                        res
+                        (list
+                         (list
+                          (car (car rules))
+                          (cadr (car rules))
+                          (caddr (car rules))
+                          (cadddr (car rules))
+                          (cadr (cdddr (car rules)))
+                          (sort (caddr (cdddar rules))
+                                (lambda (i1 i2)
+                                  (or (string<? (car i1) (car i2))
+                                      (string<? (cadr i1) (cadr i2))))))))))))
+
+  (define (service-sort rules)
+    (sort rules
+          (lambda (i1 i2)
+            (if (string<? (symbol->string (car i1))
+                          (symbol->string (car i2)))
+                (string<? (cadr i1) (cadr i2))
+                (string<? (caddr i1) (caddr i2))))))
+
+  (service-sort (route-sort rules '())))
 
 ;; Parse /proc/net/ip_vs (stored in cfg 'test:vm:sh:file:proc-ip_vs) to list of
 ;; (service_type addr port scheduler params (route1 ... routeN))
