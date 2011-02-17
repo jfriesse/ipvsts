@@ -63,11 +63,11 @@
             (tu4-m tu4-m)
             (#t #f))))
 
-  (define (parse-line file current-service res)
+  (define (parse-line file current-service rules res)
     (cond ((null? file)
            (if (not current-service)
                res
-               (append res (list current-service))))
+               (append res (list (append current-service (list rules))))))
           ((or (string-match "^TCP +" (car file))
                (string-match "^UDP +" (car file))
                (string-match "^FWM +" (car file)))
@@ -84,9 +84,10 @@
                        (substring (match:suffix service-match) 1))))
              (parse-line (cdr file)
                          (list proto addr port scheduler rest)
+                         '()
                          (if (not current-service)
                              res
-                             (append res (list current-service))))))
+                             (append res (list (append current-service (list rules))))))))
           ((string-match "^ +-> +" (car file))
            (if current-service
                (let* ((route-match (return-route-matcher (string-trim-both (car file))))
@@ -97,14 +98,15 @@
                       (active (match:substring route-match 5))
                       (inactive (match:substring route-match 6)))
                  (parse-line (cdr file)
-                             (append current-service
+                             current-service
+                             (append rules
                                      (if save-active?
                                          (list (list addr port type weight active inactive))
                                          (list (list addr port type weight))))
                              res))
-               (parse-line (cdr file) current-service res)))
+               (parse-line (cdr file) current-service rules res)))
           (#t
-           (parse-line (cdr file) current-service res))))
+           (parse-line (cdr file) current-service rules res))))
 
   (let ((res (vm:sh:get-file cl (cfg 'test:vm:sh:file:proc-ip_vs))))
-    (parse-line (string-split res #\nl) #f '())))
+    (parse-line (string-split res #\nl) #f '() '())))
