@@ -56,10 +56,13 @@
   (define (service-sort rules)
     (sort rules
           (lambda (i1 i2)
-            (if (string<? (symbol->string (car i1))
-                          (symbol->string (car i2)))
-                (string<? (cadr i1) (cadr i2))
-                (string<? (caddr i1) (caddr i2))))))
+            (cond ((string=? (symbol->string (car i1))
+                             (symbol->string (car i2)))
+                   (cond ((string=? (cadr i1) (cadr i2))
+                          (string<? (caddr i1) (caddr i2)))
+                         (#t (string<? (cadr i1) (cadr i2)))))
+                  (#t (string<? (symbol->string (car i1))
+                                (symbol->string (car i2))))))))
 
   (service-sort (route-sort rules '())))
 
