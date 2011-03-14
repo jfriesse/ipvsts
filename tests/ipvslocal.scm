@@ -27,6 +27,7 @@
 
 (use-modules (ipvsts cfg))
 (use-modules (ipvsts logging))
+(use-modules (ipvsts ipvslocal))
 (use-modules (ipvsts tunit))
 (use-modules (ipvsts utils))
 (use-modules (ipvsts vm))
@@ -38,7 +39,9 @@
 
 (export test:ipvslocal:auto-load-module test:ipvslocal:auto-unload-module
         test:ipvslocal:bad-params test:ipvslocal:module-loaded
-        test:ipvslocal:dont-load-module-on-status test:ipvslocal:man-page-test)
+        test:ipvslocal:dont-load-module-on-status test:ipvslocal:man-page-test
+        test:ipvslocal:save-restore)
+
 
 ;; Test that ip_vs module is automatically loaded on first run of ipvsadm
 ;; (not thru service init script)
@@ -227,10 +230,6 @@
                   (daemon)
                   (run-ipvsadm "-C"))))
 
-;; Test if ip_vs module is loaded
-(define (test:ipvslocal:module-loaded cl)
-  (vm:sh:is-module-loaded? cl (cfg 'test:vm:sh:module-name:ipvs)))
-
 ;; Test, that module is not loaded on start and status if no cfg file exists
 (define (test:ipvslocal:dont-load-module-on-status cl)
   (ipvsts:check 'dont-load-module-on-status
@@ -238,6 +237,10 @@
                 (not (vm:sh:service cl (cfg 'test:vm:sh:service:ipvsadm) "start"))
                 (not (vm:sh:service cl (cfg 'test:vm:sh:service:ipvsadm) "status"))
                 (not (test:ipvslocal:module-loaded cl))))
+
+;; Test if ip_vs module is loaded
+(define (test:ipvslocal:module-loaded cl)
+  (vm:sh:is-module-loaded? cl (cfg 'test:vm:sh:module-name:ipvs)))
 
 ;; Test that man page of ipvsadm exists and also that all options returned by
 ;; --help are documented. There is one exception (--ipv6) which is not documented
@@ -292,3 +295,61 @@
     (cond ((and (= (car res) 0) res-mp)
            (line-iter (string-split (cdr res) #\nl)))
           (#t #f))))
+
+;; Test save and restore of ipvsadm rules by init script
+(define (test:ipvslocal:save-restore cl net-id vm-id)
+  (define (run-ipvsadm . params)
+    (let ((res
+           (vm:sh:run-command
+            cl
+            (string-append (cfg 'test:vm:sh:cmd:ipvsadm) " "
+                           (string-list->string params " ")))))
+      (= res 0)))
+
+  (define (add-service-route ip4 ip42 ip6 ip62 port port2 fw-mark)
+    (ipvsts:check 'add-service-route
+                  (run-ipvsadm "-C")
+                  (run-ipvsadm "-A" "-t" (string-append ip4 ":" port))
+                  (run-ipvsadm "-A" "-t" (string-append "[" ip6 "]:" port))
+                  (run-ipvsadm "-A" "-u" (string-append ip4 ":" port))
+                  (run-ipvsadm "-A" "-u" (string-append "[" ip6 "]:" port))
+                  (run-ipvsadm "-A" "-f" fw-mark)
+                  (run-ipvsadm "-a" "-t" (string-append ip4 ":" port) "-r"
+                               (string-append ip4 ":" port))
+                  (run-ipvsadm "-a" "-t" (string-append ip4 ":" port) "-r"
+                               (string-append ip42 ":" port) "-m")
+                  (run-ipvsadm "-a" "-t" (string-append ip4 ":" port) "-r"
+                               (string-append ip42 ":" port2) "-m")
+                  (run-ipvsadm "-a" "-t" (string-append "[" ip6 "]:" port) "-r"
+                       (string-append "[" ip6 "]:" port2) "-m")
+                  (run-ipvsadm "-a" "-u" (string-append ip4 ":" port) "-r"
+                               (string-append ip42 ":" port) "-m")
+                  (run-ipvsadm "-a" "-u" (string-append "[" ip6 "]:" port) "-r"
+                       (string-append "[" ip6 "]:" port) "-m")
+                  (run-ipvsadm "-a" "-u" (string-append "[" ip6 "]:" port) "-r"
+                       (string-append "[" ip62 "]:" port2) "-m")
+                  (run-ipvsadm "-a" "-f" fw-mark "-r"
+                               (string-append ip4 ":" port))))
+  (let ((ip4 (simple-format #f (cfg 'test:vm:ip:addr) net-id vm-id))
+        (ip42 (simple-format #f (cfg 'test:vm:ip:addr) (+ net-id 1) (+ vm-id 1)))
+        (ip6 (simple-format #f (cfg 'test:vm:ip6:addr) net-id vm-id))
+        (ip62 (simple-format #f (cfg 'test:vm:ip6:addr) (+ net-id 1) (+ vm-id 1)))
+        (port "80")
+        (port2 "81")
+        (fw-mark "1"))
+    (ipvsts:check 'save-restore
+                  (add-service-route ip4 ip42 ip6 ip62 port port2 fw-mark)
+                  (let ((stored-res
+                         (ipvslocal:rules-sort
+                          (ipvslocal:parse:net-ip_vs cl #f))))
+                    (ipvsts:check 'saved
+                                  (vm:sh:service cl (cfg 'test:vm:sh:service:ipvsadm) "save")
+                                  (vm:sh:service cl (cfg 'test:vm:sh:service:ipvsadm) "stop")
+                                  (run-ipvsadm "-C")
+                                  (vm:sh:service cl (cfg 'test:vm:sh:service:ipvsadm) "start")
+                                  (let ((stored-res-new
+                                         (ipvslocal:rules-sort
+                                          (ipvslocal:parse:net-ip_vs cl #f))))
+                                    (ipvsts:check 'saved-check
+                                                  (run-ipvsadm "-C")
+                                                  (equal? stored-res stored-res-new))))))))

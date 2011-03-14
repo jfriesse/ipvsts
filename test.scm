@@ -23,6 +23,7 @@
 
 (set! %load-path (append %load-path (list "." "/usr/local/share/ipvsts" "/usr/share/ipvsts")))
 (use-modules (ice-9 rdelim))
+(use-modules (ice-9 regex))
 (use-modules (ice-9 rw))
 (use-modules (ipvsts cfg))
 (use-modules (ipvsts logging))
@@ -35,6 +36,8 @@
 (use-modules (ipvsts vmsh))
 (use-modules (ipvsts vminstall))
 (use-modules (ipvsts vm))
+
+(use-modules (ipvsts ipvslocal))
 
 (use-modules (tests vmcreate))
 (use-modules (tests vmprepare))
@@ -58,7 +61,7 @@
   (let* ((vm-id 1)
          (net-id 1)
          (vm-disk-name "lvs1")
-         (vm-net (list 'user (cons 'net net-id)))
+         (vm-net (list 'user (cons 'net net-id) (cons 'net (+ net-id 1))))
          (cl (rguile-client "127.0.0.1" (+ (cfg 'test:vm:rguile-port-base) vm-id))))
 
     (define (vm-start)
@@ -75,9 +78,19 @@
                 (test:ipvslocal:auto-load-module cl)
                 (test:ipvslocal:auto-unload-module cl)
                 (test:ipvslocal:man-page-test cl)
-                (test:ipvslocal:bad-params cl net-id vm-id))))
+                (test:ipvslocal:bad-params cl net-id vm-id)
+                (test:ipvslocal:save-restore cl net-id vm-id))))
 
 (test:ipvslocal)
+
+(let ((res (ipvslocal:parse:net-ip_vs (rguile-client "127.0.0.1" 2301) #t)))
+  (display (ipvslocal:rules-sort res)))
+;        (
+;  res)
+;  (sort (cddddr (res))
+;        (lambda (i1 i2)
+;          (or (string<? (car i1) (car i2))
+;              (string<? (cadr i1) (cadr i2))))))
 
 ;; (set-cfg! 'test:arch "i386")
 ;; (set-cfg! 'test:version "U5")
