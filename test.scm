@@ -73,6 +73,7 @@
   (ipvsts:check 'ipvslocal
                 (vm:disk:create-snapshot vm-disk-name)
                 (vm-start)
+                (vm:sh:set-selinux cl)
                 (vm:configure-net cl vm-id vm-net)
                 (test:ipvslocal:dont-load-module-on-status cl)
                 (test:ipvslocal:auto-load-module cl)
@@ -82,15 +83,6 @@
                 (test:ipvslocal:save-restore cl net-id vm-id))))
 
 (test:ipvslocal)
-
-(let ((res (ipvslocal:parse:net-ip_vs (rguile-client "127.0.0.1" 2301) #t)))
-  (display (ipvslocal:rules-sort res)))
-;        (
-;  res)
-;  (sort (cddddr (res))
-;        (lambda (i1 i2)
-;          (or (string<? (car i1) (car i2))
-;              (string<? (cadr i1) (cadr i2))))))
 
 ;; (set-cfg! 'test:arch "i386")
 ;; (set-cfg! 'test:version "U5")

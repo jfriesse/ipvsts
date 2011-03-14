@@ -32,7 +32,7 @@
         vm:sh:chkconfig vm:sh:create-file vm:sh:delete-yum-repo vm:sh:get-file
         vm:sh:is-module-loaded? vm:sh:reboot vm:sh:rpm-install vm:sh:run-command
         vm:sh:run-command-out vm:sh:service vm:sh:shutdown vm:sh:yum-install
-        vm:sh:yum-update)
+        vm:sh:yum-update vm:sh:set-selinux)
 
 ;; Add internal yum repo. Base url path is taken from 'test:update-url
 (define (vm:sh:add-int-update-yum-repo cl repo)
@@ -199,3 +199,11 @@
   (and
    (= (vm:sh:run-command cl (string-append (cfg 'test:vm:sh:cmd:yum) " update -y")) 0)
    (= (vm:sh:run-command cl (string-append (cfg 'test:vm:sh:cmd:yum) " clean all")) 0)))
+
+;; Set selinux
+(define (vm:sh:set-selinux cl)
+  (ipvsts:log "Setting selinux")
+  (= (vm:sh:run-command cl (string-append
+                            (cfg 'test:vm:sh:cmd:setenforce) " "
+                            (if (cfg 'test:vm:selinux) "1" "0"))
+                        )) 0)
