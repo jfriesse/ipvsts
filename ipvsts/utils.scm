@@ -26,7 +26,8 @@
 
 (export port-cat mkdir-safe find-file-in-path find-file-in-lpath
         byte->hexstr hash-table->list list->hash-table hash-table-clone
-        string-list->string)
+        string-list->string left-char-pad ip4addr->hexstr ip6addr->hexstr
+        ipport->hexstr)
 
 ;; Copy content of source-port to destination port dest-port
 ;; source and dest ports can be any type of port, but if both of them are file ports,
@@ -110,3 +111,41 @@
           (#t
            (iter (cdr l) (string-append res sep (car l))))))
   (iter l ""))
+
+;; Pad string str with pad-str from leftside but maximal upto len length
+;; so (left-char-pad "f1" "0" 4) -> "00f1"
+(define (left-char-pad str pad-str len)
+  (cond ((>= (string-length str) len) str)
+        (#t (left-char-pad (string-append pad-str str) pad-str len))))
+
+;; Convert IPv4 adddress (string) to hexadecimal value of address where all
+;; hex values are upper case
+(define (ip4addr->hexstr ip4)
+  (string-upcase
+   (left-char-pad (number->string (inet-pton AF_INET ip4) 16) "0" 8)))
+
+;; Convert IPv6 address (string) to hexadecimal value of address, where
+;; each octets are surrounded with : and all hex values are lowercase
+(define (ip6addr->hexstr ip6)
+  (define (add-colons str)
+    (define (iter res i)
+      (cond ((= i (string-length str)) res)
+            ((and (= (modulo i 4) 0) (not (= i 0)))
+             (iter (string-append res ":" (substring str i (+ i 1)))
+                   (+ i 1)))
+            (#t (iter (string-append res (substring str i (+ i 1)))
+                      (+ i 1)))))
+    (iter "" 0))
+
+  (add-colons
+   (string-downcase
+    (left-char-pad (number->string (inet-pton AF_INET6 ip6) 16) "0" (* 4 8)))))
+
+;; Convert IP port (string) to hexadecimal value of port padded to 4 places
+(define (ipport->hexstr port)
+  (string-upcase
+   (left-char-pad
+    (if
+     (string? port)
+     (number->string (string->number port) 16)
+     (number->string port 16)) "0" 4)))
