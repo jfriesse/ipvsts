@@ -214,7 +214,10 @@
       (begin
         (ipvsts:log "Disabling DAD (Duplicate Address Detection)")
         (= (vm:sh:run-command cl (string-append
-                                  (cfg 'test:vm:sh:cmd:sysctl) " "
-                                  (cfg 'test:vm:sh:disable-dad-path)
-                                  "=0")) 0))
+                                  (cfg 'test:vm:sh:cmd:sysctl) " -N -a | "
+                                  (cfg 'test:vm:sh:cmd:grep) " -F -- "
+                                  (cfg 'test:vm:sh:disable-dad-key)
+                                  " | (while read line;do "
+                                  (cfg 'test:vm:sh:cmd:sysctl) " $line=0"
+                                  ";done)")) 0))
       #t))

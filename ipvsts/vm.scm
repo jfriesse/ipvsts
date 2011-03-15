@@ -216,7 +216,6 @@
     (iter 0 net ""))
 
   (and
-   (vm:sh:set-disable-dad cl)
    (let ()
      (ipvsts:log "Stopping network")
      (= (vm:sh:run-command
@@ -241,6 +240,7 @@
          cl
          (string-append (cfg 'test:vm:sh:cmd:udevadm)
                         " trigger")) 0))
+   (vm:sh:set-disable-dad cl)
    (let ()
      (ipvsts:log "Starting network")
      (= (vm:sh:run-command
