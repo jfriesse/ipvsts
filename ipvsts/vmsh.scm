@@ -32,7 +32,7 @@
         vm:sh:chkconfig vm:sh:create-file vm:sh:delete-yum-repo vm:sh:get-file
         vm:sh:is-module-loaded? vm:sh:reboot vm:sh:rpm-install vm:sh:run-command
         vm:sh:run-command-out vm:sh:service vm:sh:shutdown vm:sh:yum-install
-        vm:sh:yum-update vm:sh:set-selinux)
+        vm:sh:yum-update vm:sh:set-selinux vm:sh:set-disable-dad)
 
 ;; Add internal yum repo. Base url path is taken from 'test:update-url
 (define (vm:sh:add-int-update-yum-repo cl repo)
@@ -207,3 +207,14 @@
                             (cfg 'test:vm:sh:cmd:setenforce) " "
                             (if (cfg 'test:vm:selinux) "1" "0"))
                         )) 0)
+
+;; Set DAD (Duplicate Address Detection)
+(define (vm:sh:set-disable-dad cl)
+  (if (cfg 'test:vm:disable-dad)
+      (begin
+        (ipvsts:log "Disabling DAD (Duplicate Address Detection)")
+        (= (vm:sh:run-command cl (string-append
+                                  (cfg 'test:vm:sh:cmd:sysctl) " "
+                                  (cfg 'test:vm:sh:disable-dad-path)
+                                  "=0")) 0))
+      #t))

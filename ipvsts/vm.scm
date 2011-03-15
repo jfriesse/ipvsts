@@ -192,6 +192,7 @@
     (iter 0 net ""))
 
   (and
+   (vm:sh:set-disable-dad cl)
    (let ()
      (ipvsts:log "Stopping network")
      (= (vm:sh:run-command
