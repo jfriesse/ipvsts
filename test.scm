@@ -57,14 +57,6 @@
 ;;              (test:vmcreate)
 ;;              (test:vm-prepare-base-image))
 
-(define (fwmark->hexstr fwmark)
-  (string-upcase
-   (left-char-pad
-    (if
-     (string? fwmark)
-     (number->string (string->number fwmark) 16)
-     (number->string fwmark 16)) "0" 8)))
-
 (define (test:ipvslocal:rules cl net-id vm-id)
   (define rules '())
 
@@ -75,6 +67,48 @@
             (string-append (cfg 'test:vm:sh:cmd:ipvsadm) " "
                            (string-list->string params " ")))))
       (= res 0)))
+
+  ;; Find list with service
+  (define (find-service ip6 type addr port)
+    (define (iter l)
+      (cond ((null? l) #f)
+            ((and
+              (equal? (caar l)
+                      (cond ((equal? type 't) 'TCP)
+                            ((equal? type 'u) 'UDP)
+                            ((equal? type 'f) 'FWM)))
+              (equal? (cadar l)
+                      (if (equal? type 'f)
+                          (fwmark->hexstr addr)
+                          (if ip6 (ip6addr->hexstr addr) (ip4addr->hexstr addr))))
+              (equal? (caddar l)
+                      (if (equal? type 'f)
+                          "0"
+                          (ipport->hexstr port))))
+             (car l))
+            (#t
+             (iter (cdr l)))))
+    (iter rules))
+
+  ;; Delete service from rules
+  (define (delete-service-from-rules ip6 type addr port)
+    (set! rules
+          (filter
+           (lambda (l)
+             (not (and
+              (equal? (car l)
+                      (cond ((equal? type 't) 'TCP)
+                            ((equal? type 'u) 'UDP)
+                            ((equal? type 'f) 'FWM)))
+              (equal? (cadr l)
+                      (if (equal? type 'f)
+                          (fwmark->hexstr addr)
+                          (if ip6 (ip6addr->hexstr addr) (ip4addr->hexstr addr))))
+              (equal? (caddr l)
+                      (if (equal? type 'f)
+                          "0"
+                          (ipport->hexstr port))))))
+           rules)))
 
   (define (clear-rules)
     (run-ipvsadm "-C")
@@ -134,6 +168,27 @@
                   (equal? (ipvslocal:rules-sort
                            (ipvslocal:parse:net-ip_vs cl #f)))))
 
+  (define (delete-service ip6 type addr port)
+    (define (run-ipvsadm-params)
+      (run-ipvsadm "-D"
+                   (cond ((equal? type 't) "-t")
+                         ((equal? type 'u) "-u")
+                         ((equal? type 'f) "-f"))
+                   (if (equal? type 'f)
+                       (string-append addr
+                                      (if ip6 " -6 " ""))
+                       (if ip6 (string-append "[" addr "]:" port)
+                           (string-append addr ":" port)))))
+
+    (define (mod-rules)
+      (delete-service-from-rules ip6 type addr port))
+
+    (ipvsts:check 'delete-service
+                  (run-ipvsadm-params)
+                  (mod-rules)
+                  (equal? (ipvslocal:rules-sort
+                           (ipvslocal:parse:net-ip_vs cl #f)))))
+
   (define (test-add-service ip4 ip42 ip6 ip62 port port2 fw-mark fw-mark2 fw-mark3 fw-mark4)
     (ipvsts:check 'test-add-service
                   (clear-rules)
@@ -166,6 +221,48 @@
                   (add-service #t 'f fw-mark2 #f "rr" "12" #f "112")
                   (add-service #t 'u ip6 port #f "12" #t "112")))
 
+  (define (test-del-service ip4 ip42 ip6 ip62 port port2 fw-mark fw-mark2 fw-mark3 fw-mark4)
+    (ipvsts:check 'test-del-service
+                  (clear-rules)
+                  (add-service #f 't ip4 port #f #f #f #f)
+                  (add-service #f 'u ip4 port #f #f #f #f)
+                  (add-service #f 'f fw-mark #f #f #f #f #f)
+                  (add-service #t 't ip6 port #f #f #f #f)
+                  (add-service #t 'u ip6 port #f #f #f #f)
+                  (add-service #t 'f fw-mark2 #f #f #f #f #f)
+                  (add-service #f 't ip42 port2 "rr" #f #f #f)
+                  (add-service #f 'u ip42 port2 "rr" #f #f #f)
+                  (add-service #f 'f fw-mark3 #f "rr" #f #f #f)
+                  (add-service #t 't ip62 port2 "rr" #f #f #f)
+                  (add-service #t 'u ip62 port2 "rr" #f #f #f)
+                  (add-service #t 'f fw-mark4 #f "rr" #f #f #f)
+
+                  (delete-service #f 't ip4 port)
+                  (delete-service #f 'f fw-mark #f)
+                  (delete-service #f 'u ip4 port)
+                  (delete-service #f 't ip42 port2)
+                  (delete-service #t 't ip6 port)
+                  (delete-service #f 'f fw-mark3 #f)
+                  (delete-service #t 't ip62 port2)
+                  (delete-service #t 'u ip6 port)
+                  (delete-service #t 'f fw-mark2 #f)
+                  (delete-service #f 'u ip42 port2)
+                  (delete-service #t 'f fw-mark4 #f)
+                  (delete-service #t 'u ip62 port2)
+
+                  (add-service #f 't ip4 port #f #f #f #f)
+                  (add-service #f 'u ip4 port #f #f #f #f)
+                  (add-service #t 'f fw-mark2 #f #f #f #f #f)
+                  (add-service #f 't ip42 port2 "rr" #f #f #f)
+                  (delete-service #f 'u ip4 port)
+                  (add-service #f 'u ip4 port #f #f #f #f)
+                  (delete-service #f 't ip4 port)
+                  (delete-service #t 'f fw-mark2 #f)
+                  (add-service #f 't ip4 port #f #f #f #f)
+                  (delete-service #f 't ip4 port)
+                  (delete-service #f 't ip42 port2)
+                  (delete-service #f 'u ip4 port)))
+
   ;;    (write 'loaded)
   ;;    (write (ipvslocal:rules-sort
   ;;              (ipvslocal:parse:net-ip_vs cl #f)))
@@ -189,7 +286,9 @@
         (fw-mark4 "901"))
     (ipvsts:check 'rules
                   (test-add-service ip4 ip42 ip6 ip62 port port2
-                                    fw-mark fw-mark2 fw-mark3 fw-mark4))))
+                                    fw-mark fw-mark2 fw-mark3 fw-mark4))
+                  (test-del-service ip4 ip42 ip6 ip62 port port2
+                                    fw-mark fw-mark2 fw-mark3 fw-mark4)))
 
 (test:ipvslocal:rules (rguile-client "127.0.0.1" (+ (cfg 'test:vm:rguile-port-base) 1)) 1 1)
 
