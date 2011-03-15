@@ -57,6 +57,13 @@
 ;;              (test:vmcreate)
 ;;              (test:vm-prepare-base-image))
 
+(define (fwmark->hexstr fwmark)
+  (string-upcase
+   (left-char-pad
+    (if
+     (string? fwmark)
+     (number->string (string->number fwmark) 16)
+     (number->string fwmark 16)) "0" 8)))
 
 (define (test:ipvslocal:rules cl net-id vm-id)
   (define rules '())
@@ -79,12 +86,15 @@
                    (cond ((equal? type 't) "-t")
                          ((equal? type 'u) "-u")
                          ((equal? type 'f) "-f"))
-                   (if ip6 (string-append "[" addr "]:" port)
-                       (string-append addr ":" port))
+                   (if (equal? type 'f)
+                       (string-append addr
+                                      (if ip6 " -6 " ""))
+                       (if ip6 (string-append "[" addr "]:" port)
+                           (string-append addr ":" port)))
                    (if scheduler (string-append "-s " scheduler) "")
                    (if timeout (string-append "-p " timeout) "")
                    (if one-packet "-O" "")
-                  (if netmask (simple-format #f "-M ~A" netmask) "")))
+                   (if netmask (simple-format #f "-M ~A" netmask) "")))
 
     (define (mod-rules)
       (set! rules
@@ -95,8 +105,12 @@
                (cond ((equal? type 't) 'TCP)
                      ((equal? type 'u) 'UDP)
                      ((equal? type 'f) 'FWM))
-               (if ip6 (ip6addr->hexstr addr) (ip4addr->hexstr addr))
-               (ipport->hexstr port)
+               (if (equal? type 'f)
+                   (fwmark->hexstr addr)
+                   (if ip6 (ip6addr->hexstr addr) (ip4addr->hexstr addr)))
+               (if (equal? type 'f)
+                   "0"
+                   (ipport->hexstr port))
                (if scheduler scheduler "wlc")
                (string-append
                 (if one-packet "ops " "")
@@ -104,13 +118,14 @@
                                            (* (string->number timeout) 1000)
                                            (if ip6
                                                (if netmask
-                                                   (ip4addr->hexstr (string-append netmask ".0.0.0"))
+                                                   (ip4addr->hexstr
+                                                    (string-append netmask ".0.0.0"))
                                                    (ip4addr->hexstr "128.0.0.0"))
                                                (if netmask
                                                    (ip4addr->hexstr netmask)
                                                    (ip4addr->hexstr "255.255.255.255"))))
-                     ""))
-                '()))))
+                    ""))
+               '()))))
       #t)
 
     (ipvsts:check 'add-service
@@ -118,16 +133,49 @@
                   (mod-rules)
                   (equal? (ipvslocal:rules-sort
                            (ipvslocal:parse:net-ip_vs cl #f)))))
-;;    (write 'loaded)
-;;    (write (ipvslocal:rules-sort
-;;              (ipvslocal:parse:net-ip_vs cl #f)))
-;;    (newline)
-;;    (write 'rules)
-;;    (write (ipvslocal:rules-sort  rules))
-;;    (newline)
-;;    (equal? (ipvslocal:rules-sort
-;;              (ipvslocal:parse:net-ip_vs cl #f))
-;;            (ipvslocal:rules-sort rules)))
+
+  (define (test-add-service ip4 ip42 ip6 ip62 port port2 fw-mark fw-mark2 fw-mark3 fw-mark4)
+    (ipvsts:check 'test-add-service
+                  (clear-rules)
+                  (add-service #f 't ip4 port #f #f #f #f)
+                  (add-service #f 'u ip4 port #f #f #f #f)
+                  (add-service #f 'f fw-mark #f #f #f #f #f)
+                  (add-service #t 't ip6 port #f #f #f #f)
+                  (add-service #t 'u ip6 port #f #f #f #f)
+                  (add-service #t 'f fw-mark2 #f #f #f #f #f)
+                  (add-service #f 't ip42 port2 "rr" #f #f #f)
+                  (add-service #f 'u ip42 port2 "rr" #f #f #f)
+                  (add-service #f 'f fw-mark3 #f "rr" #f #f #f)
+                  (add-service #t 't ip62 port2 "rr" #f #f #f)
+                  (add-service #t 'u ip62 port2 "rr" #f #f #f)
+                  (add-service #t 'f fw-mark4 #f "rr" #f #f #f)
+                  (clear-rules)
+                  (add-service #f 't ip4 port #f "12" #f #f)
+                  (add-service #f 'u ip4 port #f "12" #f #f)
+                  (add-service #f 'f fw-mark #f #f "12" #f #f)
+                  (add-service #f 'u ip42 port2 #f #f #t #f)
+                  (add-service #t 't ip6 port #f "12" #f #f)
+                  (add-service #t 'u ip6 port #f "12" #f #f)
+                  (add-service #t 'f fw-mark2 #f #f "12" #f #f)
+                  (add-service #t 'u ip62 port2 #f #f #t #f)
+                  (clear-rules)
+                  (add-service #f 't ip4 port "rr" "12" #f "255.255.255.0")
+                  (add-service #f 'f fw-mark #f "rr" "12" #f "255.255.255.0")
+                  (add-service #f 'u ip4 port #f "12" #t "255.255.255.0")
+                  (add-service #t 't ip6 port "rr" "12" #f "112")
+                  (add-service #t 'f fw-mark2 #f "rr" "12" #f "112")
+                  (add-service #t 'u ip6 port #f "12" #t "112")))
+
+  ;;    (write 'loaded)
+  ;;    (write (ipvslocal:rules-sort
+  ;;              (ipvslocal:parse:net-ip_vs cl #f)))
+  ;;    (newline)
+  ;;    (write 'rules)
+  ;;    (write (ipvslocal:rules-sort  rules))
+  ;;    (newline)
+  ;;    (equal? (ipvslocal:rules-sort
+  ;;              (ipvslocal:parse:net-ip_vs cl #f))
+  ;;            (ipvslocal:rules-sort rules)))
 
   (let ((ip4 (simple-format #f (cfg 'test:vm:ip:addr) net-id vm-id))
         (ip42 (simple-format #f (cfg 'test:vm:ip:addr) (+ net-id 1) (+ vm-id 1)))
@@ -136,32 +184,15 @@
         (port "80")
         (port2 "81")
         (fw-mark "1")
-        (fw-mark2 "2"))
+        (fw-mark2 "2")
+        (fw-mark3 "900")
+        (fw-mark4 "901"))
     (ipvsts:check 'rules
-                  (clear-rules)
-                  (add-service #f 't ip4 port #f #f #f #f)
-                  (add-service #f 'u ip4 port #f #f #f #f)
-                  (add-service #t 't ip6 port #f #f #f #f)
-                  (add-service #t 'u ip6 port #f #f #f #f)
-                  (add-service #f 't ip42 port2 "rr" #f #f #f)
-                  (add-service #f 'u ip42 port2 "rr" #f #f #f)
-                  (add-service #t 't ip62 port2 "rr" #f #f #f)
-                  (add-service #t 'u ip62 port2 "rr" #f #f #f)
-                  (clear-rules)
-                  (add-service #f 't ip4 port #f "12" #f #f)
-                  (add-service #f 'u ip4 port #f "12" #f #f)
-                  (add-service #f 'u ip42 port2 #f #f #t #f)
-                  (add-service #t 't ip6 port #f "12" #f #f)
-                  (add-service #t 'u ip6 port #f "12" #f #f)
-                  (add-service #t 'u ip62 port2 #f #f #t #f)
-                  (clear-rules)
-                  (add-service #f 't ip4 port "rr" "12" #f "255.255.255.0")
-                  (add-service #f 'u ip4 port #f "12" #t "255.255.255.0")
-                  (add-service #t 't ip6 port "rr" "12" #f "112")
-                  (add-service #t 'u ip6 port #f "12" #t "112"))))
-
+                  (test-add-service ip4 ip42 ip6 ip62 port port2
+                                    fw-mark fw-mark2 fw-mark3 fw-mark4))))
 
 (test:ipvslocal:rules (rguile-client "127.0.0.1" (+ (cfg 'test:vm:rguile-port-base) 1)) 1 1)
+
 (define (test:ipvslocal)
   (let* ((vm-id 1)
          (net-id 1)
@@ -175,17 +206,17 @@
        (lambda ()
          (vm:start vm-disk-name vm-id))))
 
-  (ipvsts:check 'ipvslocal
-                (vm:disk:create-snapshot vm-disk-name)
-                (vm-start)
-                (vm:sh:set-selinux cl)
-                (vm:configure-net cl vm-id vm-net)
-                (test:ipvslocal:dont-load-module-on-status cl)
-                (test:ipvslocal:auto-load-module cl)
-                (test:ipvslocal:auto-unload-module cl)
-                (test:ipvslocal:man-page-test cl)
-                (test:ipvslocal:bad-params cl net-id vm-id)
-                (test:ipvslocal:save-restore cl net-id vm-id))))
+    (ipvsts:check 'ipvslocal
+                  (vm:disk:create-snapshot vm-disk-name)
+                  (vm-start)
+                  (vm:sh:set-selinux cl)
+                  (vm:configure-net cl vm-id vm-net)
+                  (test:ipvslocal:dont-load-module-on-status cl)
+                  (test:ipvslocal:auto-load-module cl)
+                  (test:ipvslocal:auto-unload-module cl)
+                  (test:ipvslocal:man-page-test cl)
+                  (test:ipvslocal:bad-params cl net-id vm-id)
+                  (test:ipvslocal:save-restore cl net-id vm-id))))
 
 (test:ipvslocal)
 
@@ -196,4 +227,3 @@
 ;;                                            (cfg 'test:version) "/" (cfg 'test:arch) "/os"))
 ;; (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-" (cfg 'test:name) ".log"))
 ;; (set-cfg! 'test:distro 'el5)
-
