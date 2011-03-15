@@ -149,3 +149,12 @@
      (string? port)
      (number->string (string->number port) 16)
      (number->string port 16)) "0" 4)))
+
+;; Convert firewall mark to hex str. Result value is padded to 8 places by 0.
+(define (fwmark->hexstr fwmark)
+  (string-upcase
+   (left-char-pad
+    (if
+     (string? fwmark)
+     (number->string (string->number fwmark) 16)
+     (number->string fwmark 16)) "0" 8)))
