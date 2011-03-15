@@ -36,6 +36,23 @@
 ;; test:vm:net (network configuration). Net is in format ([user | (net . net_id)]*)
 ;; Return #t on success, otherwise #f
 (define (vm:start name vm-id)
+  (define (vm-wait-for-full-start addr port max-time)
+    (define (probe)
+      (not (not (vm:sh:get-file
+                 (rguile-client addr port)
+                 (cfg 'test:vm:sh:local-subsys-lock)))))
+
+    (let* ((t (current-time))
+           (wait-res
+            (if (<= max-time 0)
+                (probe)
+                (let ()
+                  (while (and (< (- (current-time) t) max-time)
+                              (not (probe)))
+                    (sleep 1))
+                  (if (< (- (current-time) t) max-time) #t #f)))))
+      wait-res))
+
   (define (get-net-qemu-params vm-id params)
     (define (iter params i res)
       (if (null? params) res
@@ -102,7 +119,18 @@
                           (+ vm-id (cfg 'test:vm:rguile-port-base))
                           (cfg 'test:vm:max-boot-time))
                          (let ()
-                           #t)
+                           (if (vm-wait-for-full-start
+                                "127.0.0.1"
+                                (+ vm-id (cfg 'test:vm:rguile-port-base))
+                                (cfg 'test:vm:max-boot-time))
+                               (let ()
+                                 #t)
+                               (let ()
+                                 (ipvsts:log "wait for full start of client exceed time limit ~A"
+                                             (cfg 'test:vm:max-boot-time))
+                                 (kill pid SIGINT)
+                                 (waitpid pid)
+                                 #f)))
                          (let ()
                            (ipvsts:log "wait for operational client exceed time limit ~A"
                                        (cfg 'test:vm:max-boot-time))
@@ -112,10 +140,6 @@
                    (let ()
                      (ipvsts:log "VM failed to start")
                      #f)))))))
-
-
-
-
 
 ;; Configure network for virtual machine. cl is rguile client, vm-id is
 ;; run order (id) of machine and net is list of networks avalilable for VM.

@@ -125,6 +125,7 @@
      (test:vm:sh:cmd:yum . "/usr/bin/yum")
      (test:vm:sh:cmd:udevadm . "/sbin/udevadm")
      (test:vm:sh:disable-dad-path . "net.ipv6.conf.default.accept_dad")
+     (test:vm:sh:local-subsys-lock . "/var/lock/subsys/local")
      (test:vm:sh:manpage:ipvsadm . "ipvsadm")
      (test:vm:sh:network-scripts-dir . "/etc/sysconfig/network-scripts")
      (test:vm:sh:network-scripts-name . "ifcfg-eth~A")
