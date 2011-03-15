@@ -50,8 +50,9 @@
                           (cadr (cdddr (car rules)))
                           (sort (caddr (cdddar rules))
                                 (lambda (i1 i2)
-                                  (or (string<? (car i1) (car i2))
-                                      (string<? (cadr i1) (cadr i2))))))))))))
+                                  (if (string=? (car i1) (car i2))
+                                      (string<? (cadr i1) (cadr i2))
+                                      (string<? (car i1) (car i2))))))))))))
 
   (define (service-sort rules)
     (sort rules
