@@ -27,7 +27,7 @@
 (export port-cat mkdir-safe find-file-in-path find-file-in-lpath
         byte->hexstr hash-table->list list->hash-table hash-table-clone
         string-list->string left-char-pad ip4addr->hexstr ip6addr->hexstr
-        ipport->hexstr)
+        ipport->hexstr fwmark->hexstr)
 
 ;; Copy content of source-port to destination port dest-port
 ;; source and dest ports can be any type of port, but if both of them are file ports,
