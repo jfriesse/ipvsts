@@ -166,7 +166,8 @@
                   (run-ipvsadm-params)
                   (mod-rules)
                   (equal? (ipvslocal:rules-sort
-                           (ipvslocal:parse:net-ip_vs cl #f)))))
+                           (ipvslocal:parse:net-ip_vs cl #f))
+                          (ipvslocal:rules-sort rules))))
 
   (define (delete-service ip6 type addr port)
     (define (run-ipvsadm-params)
@@ -187,7 +188,8 @@
     (ipvsts:check 'delete-service
                   (run-ipvsadm-params)
                   (mod-rules)
-                  (equal? (ipvslocal:rules-sort
+                  (equal? (ipvslocal:rules-sort rules)
+                          (ipvslocal:rules-sort
                            (ipvslocal:parse:net-ip_vs cl #f)))))
 
   (define (edit-service ip6 type addr port scheduler timeout one-packet netmask)
@@ -230,7 +232,101 @@
     (ipvsts:check 'edit-service
                   (run-ipvsadm-params)
                   (mod-rules)
-                  (equal? (ipvslocal:rules-sort
+                  (equal? (ipvslocal:rules-sort rules)
+                          (ipvslocal:rules-sort
+                           (ipvslocal:parse:net-ip_vs cl #f)))))
+
+  (define (add-route ip6 type addr port route-addr route-port route-type weight upper lower)
+    (define (run-ipvsadm-params)
+      (run-ipvsadm "-a"
+                   (cond ((equal? type 't) "-t")
+                         ((equal? type 'u) "-u")
+                         ((equal? type 'f) "-f"))
+                   (if (equal? type 'f)
+                       (string-append addr
+                                      (if ip6 " -6 " ""))
+                       (if ip6 (string-append "[" addr "]:" port)
+                           (string-append addr ":" port)))
+                   "-r"
+                   (if ip6 (string-append "[" route-addr "]:" route-port)
+                       (string-append route-addr ":" route-port))
+                   (cond ((equal? route-type 'g) "-g")
+                         ((equal? route-type 'i) "-i")
+                         ((equal? route-type 'm) "-m")
+                         (#t ""))
+                   (if weight (string-append "-w " weight) "")
+                   (if upper (string-append "-x " upper) "")
+                   (if lower (string-append "-y " lower) "")))
+
+    (define (mod-rules)
+      (let* ((service (find-service ip6 type addr port))
+             (routes (cddddr (cdr service))))
+        (set! routes
+              (append
+               routes
+               (list
+                (list
+                   (if ip6 (ip6addr->hexstr route-addr) (ip4addr->hexstr route-addr)))
+                   (ipport->hexstr route-port)
+                   (cond ((equal? route-type 'g) 'Route)
+                         ((equal? route-type 'i) 'Tunnel)
+                         ((equal? route-type 'm) 'Masq)
+                         (#t "Route"))
+                   )))
+      ;;          (if (equal? type 'f)
+      ;;              (fwmark->hexstr addr)
+      ;;              (if ip6 (ip6addr->hexstr addr) (ip4addr->hexstr addr)))
+      ;;          (if (equal? type 'f)
+      ;;              "0"
+      ;;              (ipport->hexstr port))
+      ;;          (if scheduler scheduler "wlc")
+      ;;          (string-append
+      ;;           (if one-packet "ops " "")
+      ;;           (if timeout (simple-format #f "persistent ~A ~A"
+      ;;                                      (* (string->number timeout) 1000)
+      ;;                                      (if ip6
+      ;;                                          (if netmask
+      ;;                                              (ip4addr->hexstr
+      ;;                                               (string-append netmask ".0.0.0"))
+      ;;                                              (ip4addr->hexstr "128.0.0.0"))
+      ;;                                          (if netmask
+      ;;                                              (ip4addr->hexstr netmask)
+      ;;                                              (ip4addr->hexstr "255.255.255.255"))))
+      ;;               ""))
+      ;;          '()))))
+      ;; #t)
+              
+        (write 'SERVICE)
+        (write service)
+        (newline)
+        (write 'ROUTES)
+        (write routes)
+        (newline))
+      
+        ;; (set-car! (cdddr service)
+        ;;           (if scheduler scheduler "wlc"))
+        ;; (set-car! (cddddr service)
+        ;;           (string-append
+        ;;            (if one-packet "ops " "")
+        ;;            (if timeout (simple-format #f "persistent ~A ~A"
+        ;;                                       (* (string->number timeout) 1000)
+        ;;                                       (if ip6
+        ;;                                           (if netmask
+        ;;                                               (ip4addr->hexstr
+        ;;                                                (string-append netmask ".0.0.0"))
+        ;;                                               (ip4addr->hexstr "128.0.0.0"))
+        ;;                                           (if netmask
+        ;;                                               (ip4addr->hexstr netmask)
+        ;;                                               (ip4addr->hexstr "255.255.255.255"))))
+        ;;                "")))
+        ;; #t))
+      #t)
+
+    (ipvsts:check 'add-route
+                  (run-ipvsadm-params)
+                  (mod-rules)
+                  (equal? (ipvslocal:rules-sort rules)
+                          (ipvslocal:rules-sort
                            (ipvslocal:parse:net-ip_vs cl #f)))))
 
   (define (test-add-service ip4 ip42 ip6 ip62 port port2 fw-mark fw-mark2 fw-mark3 fw-mark4)
@@ -345,9 +441,24 @@
                   (delete-service #t 'u ip6 port)
                   (delete-service #t 'f fw-mark2 #f)))
 
-  ;;    (write 'loaded)
-  ;;    (write (ipvslocal:rules-sort
-  ;;              (ipvslocal:parse:net-ip_vs cl #f)))
+  (define (test-add-route ip4 ip42 ip6 ip62 port port2 fw-mark fw-mark2 fw-mark3 fw-mark4)
+    (ipvsts:check 'test-add-route
+                  (clear-rules)
+                  (add-service #f 't ip4 port #f #f #f #f)
+                  (add-service #f 'u ip4 port #f #f #f #f)
+                  (add-service #f 'f fw-mark #f #f #f #f #f)
+                  (add-service #t 't ip6 port #f #f #f #f)
+                  (add-service #t 'u ip6 port #f #f #f #f)
+                  (add-service #t 'f fw-mark2 #f #f #f #f #f)
+
+;;                  (add-route #f 't ip4 port ip42 port #f #f #f #f))
+;;                  (add-route #f 't ip4 port ip42 port 'g #f #f #f))
+;;                  (add-route #f 't ip4 port ip42 port 'i #f #f #f))
+                  (add-route #f 't ip4 port ip42 port 'm "50" "30" "1"))
+    ;;(define (add-route ip6 type addr port route-addr route-port route-type weight upper lower)
+      (write 'loaded)
+      (write (ipvslocal:rules-sort
+                (ipvslocal:parse:net-ip_vs cl #f))))
   ;;    (newline)
   ;;    (write 'rules)
   ;;    (write (ipvslocal:rules-sort  rules))
@@ -367,12 +478,15 @@
         (fw-mark3 "900")
         (fw-mark4 "901"))
     (ipvsts:check 'rules
-                  (test-add-service ip4 ip42 ip6 ip62 port port2
-                                    fw-mark fw-mark2 fw-mark3 fw-mark4)
-                  (test-del-service ip4 ip42 ip6 ip62 port port2
-                                    fw-mark fw-mark2 fw-mark3 fw-mark4)
-                  (test-edit-service ip4 ip42 ip6 ip62 port port2
-                                    fw-mark fw-mark2 fw-mark3 fw-mark4))))
+                   ;; (test-add-service ip4 ip42 ip6 ip62 port port2
+                   ;;                   fw-mark fw-mark2 fw-mark3 fw-mark4)
+                   ;; (test-del-service ip4 ip42 ip6 ip62 port port2
+                   ;;                   fw-mark fw-mark2 fw-mark3 fw-mark4)
+                   ;; (test-edit-service ip4 ip42 ip6 ip62 port port2
+                   ;;                    fw-mark fw-mark2 fw-mark3 fw-mark4)
+
+                  (test-add-route ip4 ip42 ip6 ip62 port port2
+                                  fw-mark fw-mark2 fw-mark3 fw-mark4))))
 
 (test:ipvslocal:rules (rguile-client "127.0.0.1" (+ (cfg 'test:vm:rguile-port-base) 1)) 1 1)
 
