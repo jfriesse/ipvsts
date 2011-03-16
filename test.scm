@@ -96,18 +96,18 @@
           (filter
            (lambda (l)
              (not (and
-              (equal? (car l)
-                      (cond ((equal? type 't) 'TCP)
-                            ((equal? type 'u) 'UDP)
-                            ((equal? type 'f) 'FWM)))
-              (equal? (cadr l)
-                      (if (equal? type 'f)
-                          (fwmark->hexstr addr)
-                          (if ip6 (ip6addr->hexstr addr) (ip4addr->hexstr addr))))
-              (equal? (caddr l)
-                      (if (equal? type 'f)
-                          "0"
-                          (ipport->hexstr port))))))
+                   (equal? (car l)
+                           (cond ((equal? type 't) 'TCP)
+                                 ((equal? type 'u) 'UDP)
+                                 ((equal? type 'f) 'FWM)))
+                   (equal? (cadr l)
+                           (if (equal? type 'f)
+                               (fwmark->hexstr addr)
+                               (if ip6 (ip6addr->hexstr addr) (ip4addr->hexstr addr))))
+                   (equal? (caddr l)
+                           (if (equal? type 'f)
+                               "0"
+                               (ipport->hexstr port))))))
            rules)))
 
   ;; Delete route from service
@@ -243,7 +243,6 @@
                        "")))
         #t))
 
-
     (ipvsts:check 'edit-service
                   (run-ipvsadm-params)
                   (mod-rules)
@@ -288,7 +287,7 @@
                        (#t "Route"))
                  (if weight weight "1")))))
         (set-cdr! (cdddr (cdr service)) (list routes))
-      #t))
+        #t))
 
     (ipvsts:check 'add-route
                   (run-ipvsadm-params)
@@ -469,16 +468,65 @@
                   (del-route #f 't ip4 port ip4 port)
                   (add-route #f 't ip4 port ip42 port #f #f)
                   (del-route #f 't ip4 port ip43 port)
-                  (del-route #f 't ip4 port ip42 port))
+                  (del-route #f 't ip4 port ip42 port)
 
-    ;;(define (add-route ip6 type addr port route-addr route-port route-type weight upper lower)
-      (write 'loaded)
-      (write (ipvslocal:rules-sort
-                (ipvslocal:parse:net-ip_vs cl #f)))
-      (newline)
-      (write 'rules)
-      (write (ipvslocal:rules-sort  rules))
-      (newline))
+                  (del-route #f 'u ip4 port ip42 port)
+                  (del-route #f 'u ip4 port ip4 port)
+                  (add-route #f 'u ip4 port ip42 port #f #f)
+                  (del-route #f 'u ip4 port ip43 port)
+                  (del-route #f 'u ip4 port ip42 port)
+
+                  (del-route #f 'f fw-mark #f ip42 port2)
+                  (del-route #f 'f fw-mark #f ip4 port2)
+                  (add-route #f 'f fw-mark #f ip42 port2 #f #f)
+                  (del-route #f 'f fw-mark #f ip43 port)
+                  (del-route #f 'f fw-mark #f ip42 port2)
+
+                  (del-route #t 't ip6 port ip62 port)
+                  (del-route #t 't ip6 port ip6 port)
+                  (add-route #t 't ip6 port ip62 port #f #f)
+                  (del-route #t 't ip6 port ip63 port)
+                  (del-route #t 't ip6 port ip62 port)
+
+                  (del-route #t 'u ip6 port ip62 port)
+                  (del-route #t 'u ip6 port ip6 port)
+                  (add-route #t 'u ip6 port ip62 port #f #f)
+                  (del-route #t 'u ip6 port ip63 port)
+                  (del-route #t 'u ip6 port ip62 port)
+
+                  (del-route #t 'f fw-mark2 #f ip62 port2)
+                  (del-route #t 'f fw-mark2 #f ip6 port2)
+                  (add-route #t 'f fw-mark2 #f ip62 port2 #f #f)
+                  (del-route #t 'f fw-mark2 #f ip63 port)
+                  (del-route #t 'f fw-mark2 #f ip62 port2)
+
+                  (add-route #f 't ip4 port ip42 port 'm #f)
+                  (add-route #f 't ip4 port ip4 port 'l #f)
+                  (add-route #f 't ip4 port ip43 port 'm #f)
+                  (add-route #f 'u ip4 port ip42 port 'm #f)
+                  (add-route #f 'u ip4 port ip4 port 'l #f)
+                  (add-route #f 'u ip4 port ip43 port 'm #f)
+                  (add-route #f 'f fw-mark #f ip42 port2 'm #f)
+                  (add-route #f 'f fw-mark #f ip4 port2 'l #f)
+                  (add-route #f 'f fw-mark #f ip43 port 'm #f)
+
+                  (add-route #t 't ip6 port ip62 port 'm #f)
+                  (add-route #t 't ip6 port ip6 port 'l #f)
+                  (add-route #t 't ip6 port ip63 port 'm #f)
+                  (add-route #t 'u ip6 port ip62 port 'm #f)
+                  (add-route #t 'u ip6 port ip6 port 'l #f)
+                  (add-route #t 'u ip6 port ip63 port 'm #f)
+                  (add-route #t 'f fw-mark2 #f ip62 port2 'm #f)
+                  (add-route #t 'f fw-mark2 #f ip6 port2 'l #f)
+                  (add-route #t 'f fw-mark2 #f ip63 port 'm #f)))
+
+  ;;      (write 'loaded)
+  ;;     (write (ipvslocal:rules-sort
+  ;;               (ipvslocal:parse:net-ip_vs cl #f)))
+  ;;     (newline)
+  ;;     (write 'rules)
+  ;;     (write (ipvslocal:rules-sort  rules))
+  ;;     (newline))
   ;;    (equal? (ipvslocal:rules-sort
   ;;              (ipvslocal:parse:net-ip_vs cl #f))
   ;;            (ipvslocal:rules-sort rules)))
@@ -496,15 +544,14 @@
         (fw-mark3 "900")
         (fw-mark4 "901"))
     (ipvsts:check 'rules
-                   ;; (test-add-service ip4 ip42 ip6 ip62 port port2
-                   ;;                   fw-mark fw-mark2 fw-mark3 fw-mark4)
-                   ;; (test-del-service ip4 ip42 ip6 ip62 port port2
-                   ;;                   fw-mark fw-mark2 fw-mark3 fw-mark4)
-                   ;; (test-edit-service ip4 ip42 ip6 ip62 port port2
-                   ;;                    fw-mark fw-mark2 fw-mark3 fw-mark4)
-
+                  (test-add-service ip4 ip42 ip6 ip62 port port2
+                                    fw-mark fw-mark2 fw-mark3 fw-mark4)
+                  (test-del-service ip4 ip42 ip6 ip62 port port2
+                                    fw-mark fw-mark2 fw-mark3 fw-mark4)
+                  (test-edit-service ip4 ip42 ip6 ip62 port port2
+                                     fw-mark fw-mark2 fw-mark3 fw-mark4)
                   (test-add-del-route ip4 ip42 ip43 ip6 ip62 ip63 port port2
-                                  fw-mark fw-mark2 fw-mark3 fw-mark4))))
+                                      fw-mark fw-mark2 fw-mark3 fw-mark4))))
 
 (test:ipvslocal:rules (rguile-client "127.0.0.1" (+ (cfg 'test:vm:rguile-port-base) 1)) 1 1)
 
