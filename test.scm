@@ -90,6 +90,22 @@
              (iter (cdr l)))))
     (iter rules))
 
+  (define (find-service-route ip6 type addr port route-addr route-port)
+    (define (iter l)
+      (cond ((null? l) #f)
+            ((and
+              (equal? (caar l)
+                      (if ip6 (ip6addr->hexstr route-addr) (ip4addr->hexstr route-addr)))
+              (equal? (cadar l)
+                      (ipport->hexstr route-port)))
+             (car l))
+            (#t
+             (iter (cdr l)))))
+
+    (let* ((service (find-service ip6 type addr port))
+           (routes (car (cddddr (cdr service)))))
+      (iter routes)))
+
   ;; Delete service from rules
   (define (delete-service-from-rules ip6 type addr port)
     (set! rules
