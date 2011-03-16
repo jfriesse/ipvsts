@@ -338,6 +338,45 @@
                           (ipvslocal:rules-sort
                            (ipvslocal:parse:net-ip_vs cl #f)))))
 
+  (define (edit-route ip6 type addr port route-addr route-port route-type weight)
+    (define (run-ipvsadm-params)
+      (run-ipvsadm "-e"
+                   (cond ((equal? type 't) "-t")
+                         ((equal? type 'u) "-u")
+                         ((equal? type 'f) "-f"))
+                   (if (equal? type 'f)
+                       (string-append addr
+                                      (if ip6 " -6 " ""))
+                       (if ip6 (string-append "[" addr "]:" port)
+                           (string-append addr ":" port)))
+                   "-r"
+                   (if ip6 (string-append "[" route-addr "]:" route-port)
+                       (string-append route-addr ":" route-port))
+                   (cond ((equal? route-type 'g) "-g")
+                         ((equal? route-type 'i) "-i")
+                         ((equal? route-type 'm) "-m")
+                         (#t ""))
+                   (if weight (string-append "-w " weight) "")))
+
+    (define (mod-rules)
+      (let ((routes (find-service-route ip6 type addr port route-addr route-port)))
+        (set-car! (cddr routes)
+                  (cond ((equal? route-type 'g) "Route")
+                        ((equal? route-type 'i) "Tunnel")
+                        ((equal? route-type 'm) "Masq")
+                        ((equal? route-type 'l) "Local")
+                        (#t "Route")))
+        (set-car! (cdddr routes)
+                  (if weight weight "1"))
+        #t))
+
+    (ipvsts:check 'edit-route
+                  (run-ipvsadm-params)
+                  (mod-rules)
+                  (equal? (ipvslocal:rules-sort rules)
+                          (ipvslocal:rules-sort
+                           (ipvslocal:parse:net-ip_vs cl #f)))))
+
   (define (test-add-service ip4 ip42 ip6 ip62 port port2 fw-mark fw-mark2 fw-mark3 fw-mark4)
     (ipvsts:check 'test-add-service
                   (clear-rules)
@@ -460,15 +499,15 @@
                   (add-service #t 'u ip6 port #f #f #f #f)
                   (add-service #t 'f fw-mark2 #f #f #f #f #f)
 
-                  (add-route #f 't ip4 port ip42 port #f #f)
-                  (add-route #f 't ip4 port ip4 port 'l #f)
-                  (add-route #f 't ip4 port ip43 port #f #f)
-                  (add-route #f 'u ip4 port ip42 port 'g #f)
-                  (add-route #f 'u ip4 port ip4 port 'l #f)
-                  (add-route #f 'u ip4 port ip43 port 'g #f)
-                  (add-route #f 'f fw-mark #f ip42 port2 'i #f)
-                  (add-route #f 'f fw-mark #f ip4 port2 'l #f)
-                  (add-route #f 'f fw-mark #f ip43 port 'i #f)
+                  (add-route #f 't ip4 port ip42 port #f "2")
+                  (add-route #f 't ip4 port ip4 port 'l "3")
+                  (add-route #f 't ip4 port ip43 port #f "4")
+                  (add-route #f 'u ip4 port ip42 port 'g "5")
+                  (add-route #f 'u ip4 port ip4 port 'l "6")
+                  (add-route #f 'u ip4 port ip43 port 'g "7")
+                  (add-route #f 'f fw-mark #f ip42 port2 'i "8")
+                  (add-route #f 'f fw-mark #f ip4 port2 'l "9")
+                  (add-route #f 'f fw-mark #f ip43 port 'i "10")
 
                   (add-route #t 't ip6 port ip62 port #f #f)
                   (add-route #t 't ip6 port ip6 port 'l #f)
@@ -536,16 +575,59 @@
                   (add-route #t 'f fw-mark2 #f ip6 port2 'l #f)
                   (add-route #t 'f fw-mark2 #f ip63 port 'm #f)))
 
-  ;;      (write 'loaded)
-  ;;     (write (ipvslocal:rules-sort
-  ;;               (ipvslocal:parse:net-ip_vs cl #f)))
-  ;;     (newline)
-  ;;     (write 'rules)
-  ;;     (write (ipvslocal:rules-sort  rules))
-  ;;     (newline))
-  ;;    (equal? (ipvslocal:rules-sort
-  ;;              (ipvslocal:parse:net-ip_vs cl #f))
-  ;;            (ipvslocal:rules-sort rules)))
+  (define (test-edit-route ip4 ip42 ip43 ip6 ip62 ip63 port port2 fw-mark fw-mark2 fw-mark3 fw-mark4)
+    (ipvsts:check 'test-edit-route
+                  (clear-rules)
+                  (add-service #f 't ip4 port #f #f #f #f)
+                  (add-service #f 'u ip4 port #f #f #f #f)
+                  (add-service #f 'f fw-mark #f #f #f #f #f)
+                  (add-service #t 't ip6 port #f #f #f #f)
+                  (add-service #t 'u ip6 port #f #f #f #f)
+                  (add-service #t 'f fw-mark2 #f #f #f #f #f)
+
+                  (add-route #f 't ip4 port ip42 port #f #f)
+                  (add-route #f 't ip4 port ip4 port 'l #f)
+                  (add-route #f 't ip4 port ip43 port #f #f)
+                  (add-route #f 'u ip4 port ip42 port 'g #f)
+                  (add-route #f 'u ip4 port ip4 port 'l #f)
+                  (add-route #f 'u ip4 port ip43 port 'g #f)
+                  (add-route #f 'f fw-mark #f ip42 port2 'i #f)
+                  (add-route #f 'f fw-mark #f ip4 port2 'l #f)
+                  (add-route #f 'f fw-mark #f ip43 port 'i #f)
+
+                  (add-route #t 't ip6 port ip62 port #f #f)
+                  (add-route #t 't ip6 port ip6 port 'l #f)
+                  (add-route #t 't ip6 port ip63 port #f #f)
+                  (add-route #t 'u ip6 port ip62 port 'g #f)
+                  (add-route #t 'u ip6 port ip6 port 'l #f)
+                  (add-route #t 'u ip6 port ip63 port 'g #f)
+                  (add-route #t 'f fw-mark2 #f ip62 port2 'i #f)
+                  (add-route #t 'f fw-mark2 #f ip6 port2 'l #f)
+                  (add-route #t 'f fw-mark2 #f ip63 port 'i #f)
+
+                  (edit-route #f 't ip4 port ip42 port 'm #f)
+                  (edit-route #f 't ip4 port ip43 port #f "1")
+                  (edit-route #f 't ip4 port ip4 port 'l "2")
+
+                  (edit-route #f 'u ip4 port ip42 port 'm "55")
+                  (edit-route #f 'u ip4 port ip43 port #f #f)
+                  (edit-route #f 'u ip4 port ip4 port 'l #f)
+
+                  (edit-route #f 'f fw-mark #f ip42 port2 'm "2")
+                  (edit-route #f 'f fw-mark #f ip4 port2 'l "50")
+                  (edit-route #f 'f fw-mark #f ip43 port 'g #f)
+
+                  (edit-route #t 't ip6 port ip62 port 'm #f)
+                  (edit-route #t 't ip6 port ip63 port #f "1")
+                  (edit-route #t 't ip6 port ip6 port 'l "2")
+
+                  (edit-route #t 'u ip6 port ip62 port 'm "55")
+                  (edit-route #t 'u ip6 port ip63 port #f #f)
+                  (edit-route #t 'u ip6 port ip6 port 'l #f)
+
+                  (edit-route #t 'f fw-mark2 #f ip62 port2 'm "2")
+                  (edit-route #t 'f fw-mark2 #f ip6 port2 'l "50")
+                  (edit-route #t 'f fw-mark2 #f ip63 port 'g #f)))
 
   (let ((ip4 (simple-format #f (cfg 'test:vm:ip:addr) net-id vm-id))
         (ip42 (simple-format #f (cfg 'test:vm:ip:addr) (+ net-id 1) (+ vm-id 1)))
@@ -567,7 +649,9 @@
                   (test-edit-service ip4 ip42 ip6 ip62 port port2
                                      fw-mark fw-mark2 fw-mark3 fw-mark4)
                   (test-add-del-route ip4 ip42 ip43 ip6 ip62 ip63 port port2
-                                      fw-mark fw-mark2 fw-mark3 fw-mark4))))
+                                      fw-mark fw-mark2 fw-mark3 fw-mark4)
+                  (test-edit-route ip4 ip42 ip43 ip6 ip62 ip63 port port2
+                                   fw-mark fw-mark2 fw-mark3 fw-mark4))))
 
 (test:ipvslocal:rules (rguile-client "127.0.0.1" (+ (cfg 'test:vm:rguile-port-base) 1)) 1 1)
 
