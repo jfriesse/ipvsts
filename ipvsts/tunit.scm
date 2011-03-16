@@ -41,6 +41,7 @@
 ;; return result
 (define (ipvsts:report-result result form)
   (simple-format #t "~A ... ~A: ~A\n" (if result "pass" "FAIL") (ipvsts:check-list-get) form)
+  (force-output)
   result)
 
 ;; Macro for doing tests
