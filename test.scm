@@ -53,11 +53,10 @@
                                           "/" (cfg 'test:arch) "/os"))
 (set-cfg! 'test:log-file-name (string-append (getenv "HOME") "/ipvsts-" (cfg 'test:name) ".log"))
 
-;;(ipvsts:check 'test
-;;              (test:vmcreate)
-;;              (test:vm-prepare-base-image))
-
-(test:ipvslocal)
+(ipvsts:check 'test
+              (test:vmcreate)
+              (test:vm-prepare-base-image)
+              (test:ipvslocal))
 
 ;; (set-cfg! 'test:arch "i386")
 ;; (set-cfg! 'test:version "U5")
