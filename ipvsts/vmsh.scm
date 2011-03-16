@@ -45,7 +45,9 @@
 ;; Add internal yum repo. Base url path is taken from 'test:install-url
 (define (vm:sh:add-int-yum-repo cl repo)
   (if (cfg 'test:install-url)
-      (vm:sh:add-yum-repo cl repo (string-append (cfg 'test:install-url) "/" repo))
+      (if (equal? repo ".")
+          (vm:sh:add-yum-repo cl "basedot" (string-append (cfg 'test:install-url) "/"))
+          (vm:sh:add-yum-repo cl repo (string-append (cfg 'test:install-url) "/" repo)))
       #t))
 
 ;; Add yum repo with url to client
