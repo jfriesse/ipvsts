@@ -321,7 +321,7 @@
                   (run-ipvsadm "-a" "-t" (string-append ip4 ":" port) "-r"
                                (string-append ip42 ":" port2) "-m")
                   (run-ipvsadm "-a" "-t" (string-append "[" ip6 "]:" port) "-r"
-                       (string-append "[" ip6 "]:" port2) "-m")
+                       (string-append "[" ip6 "]:" port) "-m")
                   (run-ipvsadm "-a" "-u" (string-append ip4 ":" port) "-r"
                                (string-append ip42 ":" port) "-m")
                   (run-ipvsadm "-a" "-u" (string-append "[" ip6 "]:" port) "-r"
