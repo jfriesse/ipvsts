@@ -213,6 +213,8 @@
   (if (cfg 'test:vm:disable-dad)
       (begin
         (ipvsts:log "Disabling DAD (Duplicate Address Detection)")
+        ;; Fail in modprobe is discarded intentionally
+        (vm:sh:modprobe cl (cfg 'test:vm:sh:module-name:ipv6))
         (= (vm:sh:run-command cl (string-append
                                   (cfg 'test:vm:sh:cmd:sysctl) " -N -a | "
                                   (cfg 'test:vm:sh:cmd:grep) " -F -- "

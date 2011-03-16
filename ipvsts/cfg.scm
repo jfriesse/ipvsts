@@ -133,6 +133,7 @@
      (test:vm:sh:network-scripts-rm . "ifcfg-eth*")
      (test:vm:sh:service:ipvsadm . "ipvsadm")
      (test:vm:sh:module-name:ipvs . "ip_vs")
+     (test:vm:sh:module-name:ipv6 . "ipv6")
      (test:vm:sh:file:proc-modules . "/proc/modules")
      (test:vm:sh:file:proc-ip_vs . "/proc/net/ip_vs")
      (test:vm:sh:yum-repos-dir . "/etc/yum.repos.d")
