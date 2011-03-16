@@ -36,13 +36,17 @@
 
 ;; Add internal yum repo. Base url path is taken from 'test:update-url
 (define (vm:sh:add-int-update-yum-repo cl repo)
-  (vm:sh:add-yum-repo cl
-                      (string-append repo "-updates")
-                      (string-append (cfg 'test:update-url) "/" repo)))
+  (if (cfg 'test:update-url)
+      (vm:sh:add-yum-repo cl
+                          (string-append repo "-updates")
+                          (string-append (cfg 'test:update-url) "/" repo))
+      #t))
 
 ;; Add internal yum repo. Base url path is taken from 'test:install-url
 (define (vm:sh:add-int-yum-repo cl repo)
-  (vm:sh:add-yum-repo cl repo (string-append (cfg 'test:install-url) "/" repo)))
+  (if (cfg 'test:install-url)
+      (vm:sh:add-yum-repo cl repo (string-append (cfg 'test:install-url) "/" repo))
+      #t))
 
 ;; Add yum repo with url to client
 (define (vm:sh:add-yum-repo cl repo url)
