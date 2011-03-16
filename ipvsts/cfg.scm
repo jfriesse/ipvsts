@@ -114,6 +114,7 @@
      (test:vm:sh:cmd:grep . "/bin/grep")
      (test:vm:sh:cmd:ipvsadm . "/sbin/ipvsadm")
      (test:vm:sh:cmd:man . "/usr/bin/man")
+     (test:vm:sh:cmd:modprobe . "/sbin/modprobe")
      (test:vm:sh:cmd:poweroff . "/sbin/poweroff")
      (test:vm:sh:cmd:reboot . "/sbin/reboot")
      (test:vm:sh:cmd:rm . "/bin/rm")
