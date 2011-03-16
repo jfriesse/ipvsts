@@ -42,7 +42,6 @@
 (use-modules (tests vmcreate))
 (use-modules (tests vmprepare))
 (use-modules (tests ipvslocal))
-(use-modules (tests ipvslocalrules))
 
 (set-cfg! 'test:arch "i386")
 (set-cfg! 'test:version "6.0")
@@ -58,40 +57,7 @@
 ;;              (test:vmcreate)
 ;;              (test:vm-prepare-base-image))
 
-
-;; Complete check of local only ipvs tests
-(define (test:ipvslocal)
-  (let* ((vm-id 1)
-         (net-id 1)
-         (vm-disk-name "lvs1")
-         (vm-net (list (cons 'net net-id) (cons 'net (+ net-id 1))))
-         (cl (rguile-client "127.0.0.1" (+ (cfg 'test:vm:rguile-port-base) vm-id))))
-
-    (define (vm-start)
-      (call-with-cfg
-       (list (cons 'test:vm:net vm-net))
-       (lambda ()
-         (vm:start vm-disk-name vm-id))))
-
-    (ipvsts:check 'ipvslocal
-                  (vm:disk:create-snapshot vm-disk-name)
-                  (vm-start)
-                  (vm:sh:set-selinux cl)
-                  (vm:configure-net cl vm-id vm-net)
-                  (test:ipvslocal:dont-load-module-on-status cl)
-                  (test:ipvslocal:auto-load-module cl)
-                  (test:ipvslocal:auto-unload-module cl)
-                  (test:ipvslocal:man-page-test cl)
-                  (test:ipvslocal:bad-params cl net-id vm-id)
-                  (test:ipvslocal:save-restore cl net-id vm-id)
-                  (test:ipvslocal:rules cl net-id vm-id)
-                  (vm:sh:shutdown "127.0.0.1"
-                                  (+ (cfg 'test:vm:rguile-port-base) vm-id)
-                                  #t #t))))
-
 (test:ipvslocal)
-
-
 
 ;; (set-cfg! 'test:arch "i386")
 ;; (set-cfg! 'test:version "U5")

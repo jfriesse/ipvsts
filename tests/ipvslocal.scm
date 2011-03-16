@@ -34,13 +34,14 @@
 (use-modules (ipvsts vmdisk))
 (use-modules (ipvsts vminstall))
 (use-modules (ipvsts vmsh))
+(use-modules (tests ipvslocalrules))
 
 (use-modules (rguile client))
 
 (export test:ipvslocal:auto-load-module test:ipvslocal:auto-unload-module
         test:ipvslocal:bad-params test:ipvslocal:module-loaded
         test:ipvslocal:dont-load-module-on-status test:ipvslocal:man-page-test
-        test:ipvslocal:save-restore)
+        test:ipvslocal:save-restore test:ipvslocal)
 
 
 ;; Test that ip_vs module is automatically loaded on first run of ipvsadm
@@ -353,3 +354,33 @@
                                     (ipvsts:check 'saved-check
                                                   (run-ipvsadm "-C")
                                                   (equal? stored-res stored-res-new))))))))
+
+;; Complete check of local only ipvs tests
+(define (test:ipvslocal)
+  (let* ((vm-id 1)
+         (net-id 1)
+         (vm-disk-name "lvs1")
+         (vm-net (list (cons 'net net-id) (cons 'net (+ net-id 1))))
+         (cl (rguile-client "127.0.0.1" (+ (cfg 'test:vm:rguile-port-base) vm-id))))
+
+    (define (vm-start)
+      (call-with-cfg
+       (list (cons 'test:vm:net vm-net))
+       (lambda ()
+         (vm:start vm-disk-name vm-id))))
+
+    (ipvsts:check 'ipvslocal
+                  (vm:disk:create-snapshot vm-disk-name)
+                  (vm-start)
+                  (vm:sh:set-selinux cl)
+                  (vm:configure-net cl vm-id vm-net)
+                  (test:ipvslocal:dont-load-module-on-status cl)
+                  (test:ipvslocal:auto-load-module cl)
+                  (test:ipvslocal:auto-unload-module cl)
+                  (test:ipvslocal:man-page-test cl)
+                  (test:ipvslocal:bad-params cl net-id vm-id)
+                  (test:ipvslocal:save-restore cl net-id vm-id)
+                  (test:ipvslocal:rules cl net-id vm-id)
+                  (vm:sh:shutdown "127.0.0.1"
+                                  (+ (cfg 'test:vm:rguile-port-base) vm-id)
+                                  #t #t))))
