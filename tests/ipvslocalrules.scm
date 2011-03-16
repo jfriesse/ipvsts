@@ -470,7 +470,8 @@
                   (delete-service #t 'u ip6 port)
                   (delete-service #t 'f fw-mark2 #f)))
 
-  (define (test-add-del-route ip4 ip42 ip43 ip6 ip62 ip63 port port2 fw-mark fw-mark2 fw-mark3 fw-mark4)
+  (define (test-add-del-route ip4 ip42 ip43 ip6 ip62 ip63 port port2 fw-mark fw-mark2 fw-mark3
+                              fw-mark4)
     (ipvsts:check 'test-add-del-route
                   (clear-rules)
                   (add-service #f 't ip4 port #f #f #f #f)
@@ -556,7 +557,8 @@
                   (add-route #t 'f fw-mark2 #f ip6 port2 'l #f)
                   (add-route #t 'f fw-mark2 #f ip63 port 'm #f)))
 
-  (define (test-edit-route ip4 ip42 ip43 ip6 ip62 ip63 port port2 fw-mark fw-mark2 fw-mark3 fw-mark4)
+  (define (test-edit-route ip4 ip42 ip43 ip6 ip62 ip63 port port2 fw-mark fw-mark2 fw-mark3
+                           fw-mark4)
     (ipvsts:check 'test-edit-route
                   (clear-rules)
                   (add-service #f 't ip4 port #f #f #f #f)
