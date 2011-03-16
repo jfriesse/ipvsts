@@ -84,7 +84,10 @@
                   (test:ipvslocal:man-page-test cl)
                   (test:ipvslocal:bad-params cl net-id vm-id)
                   (test:ipvslocal:save-restore cl net-id vm-id)
-                  (test:ipvslocal:rules cl net-id vm-id))))
+                  (test:ipvslocal:rules cl net-id vm-id)
+                  (vm:sh:shutdown "127.0.0.1"
+                                  (+ (cfg 'test:vm:rguile-port-base) vm-id)
+                                  #t #t))))
 
 (test:ipvslocal)
 
