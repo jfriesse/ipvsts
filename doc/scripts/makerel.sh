@@ -48,4 +48,4 @@ git archive --format=tar --prefix="ipvsts-$VER/" "$VER" | gzip -9 > ipvsts-$VER.
 echo "Archive created."
 echo "Next steps:"
 echo "scp $PWD/ipvsts-$VER.tar.gz fedorahosted.org:ipvsts"
-echo "git push --all"
+echo "git push --tags"
