@@ -84,7 +84,7 @@
    '((ipvsts:qemu-img . "/usr/bin/qemu-img")
      (ipvsts:qemu . "/usr/bin/qemu-kvm")
      (ipvsts:http-mirror . "http://download")
-     (ipvsts:vm-disk-size . "1.5G")
+     (ipvsts:vm-disk-size . "2G")
      (ipvsts:vm-passwd . "password")
      (test:arch . "unknown")
      (test:chkconfig:off . ("ipvsadm" "iptables" "ip6tables" "arptables_jf" "network"))
