@@ -95,10 +95,10 @@
      (test:install-url . "unknown")
      (test:update-url . #f)
      (test:vm:disable-dad . #f)
-     (test:vm:mem . 128)
+     (test:vm:mem . 256)
      (test:vm:net . (user))
      (test:vm:rguile-port-base . 2300)
-     (test:vm:update-mem . 512)
+     (test:vm:update-mem . 768)
      (test:vm:vnc-base . 10)
      (test:vm:ip:addr . "192.168.~A.~A")
      (test:vm:ip:mask . "255.255.255.0")
@@ -149,7 +149,7 @@
      (vminstall:http-path:initrd . "images/pxeboot/initrd.img")
      (vminstall:http-port . 8888)
      (vminstall:qemu-local-addr . "10.0.2.2")
-     (vminstall:mem . 512)))
+     (vminstall:mem . 768)))
 
   ;; Computed values
   (set-cfg! 'ipvsts:vm-dir (string-append (getenv "HOME") "/vms"))
