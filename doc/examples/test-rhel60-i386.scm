@@ -38,7 +38,7 @@
 
 (set-cfg! 'test:arch "i386")
 (set-cfg! 'test:version (string-append local-version-major "." local-version-minor))
-(set-cfg! 'test:name (string-append "rhel-" local-version-major))
+(set-cfg! 'test:name (string-append "rhel-" local-version-major "-" (cfg 'test:arch)))
 
 (set-cfg! 'test:install-url (string-append (cfg 'ipvsts:http-mirror)
                                            "/released/RHEL-" local-version-major "-Server/"

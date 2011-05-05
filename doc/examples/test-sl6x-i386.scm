@@ -34,7 +34,7 @@
 
 (set-cfg! 'test:arch "i386")
 (set-cfg! 'test:version "6x")
-(set-cfg! 'test:name "sl-6x")
+(set-cfg! 'test:name (string-append "sl-6x" "-" (cfg 'test:arch)))
 (set-cfg! 'ipvsts:http-mirror "http://ftp.scientificlinux.org")
 (set-cfg! 'test:install-url (string-append (cfg 'ipvsts:http-mirror) "/linux/scientific/"
                                            (cfg 'test:version) "/" (cfg 'test:arch) "/os"))
